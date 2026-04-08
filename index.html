@@ -506,85 +506,21 @@
     <footer>本工具为辅助生成平台，所有信息请以领馆与VFS官方要求为准。</footer>
   </div>
 
+  <script src="./schengen-data.js"></script>
   <script>
     const weekCN = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
     const weekEN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const schengenCountries = ["奥地利", "比利时", "捷克", "丹麦", "爱沙尼亚", "芬兰", "法国", "德国", "希腊", "匈牙利", "冰岛", "意大利", "拉脱维亚", "列支敦士登", "立陶宛", "卢森堡", "马耳他", "荷兰", "挪威", "波兰", "葡萄牙", "斯洛伐克", "斯洛文尼亚", "西班牙", "瑞典", "瑞士"];
-    const countryCityMap = {
-      "中国": ["北京", "上海", "广州", "深圳", "成都", "杭州", "重庆", "南京", "武汉", "西安", "苏州", "天津"],
-      "意大利": ["罗马", "米兰", "佛罗伦萨", "威尼斯", "那不勒斯", "都灵", "博洛尼亚", "比萨", "维罗纳", "锡耶纳", "热那亚", "巴里", "奥尔蒂塞伊"],
-      "法国": ["巴黎", "里昂", "马赛", "尼斯", "图卢兹", "波尔多"],
-      "德国": ["柏林", "慕尼黑", "法兰克福", "汉堡", "科隆"],
-      "西班牙": ["马德里", "巴塞罗那", "塞维利亚", "瓦伦西亚", "马拉加"],
-      "瑞士": ["苏黎世", "日内瓦", "卢塞恩", "因特拉肯", "伯尔尼"]
-    };
-    schengenCountries.forEach(c => {
-      if (!countryCityMap[c]) countryCityMap[c] = ["首都", "主要城市1", "主要城市2"];
-    });
-    const italianRegions = {
-      "拉齐奥": ["罗马", "蒂沃利", "奇维塔韦基亚"],
-      "伦巴第": ["米兰", "贝加莫", "科莫"],
-      "托斯卡纳": ["佛罗伦萨", "比萨", "锡耶纳"],
-      "威尼托": ["威尼斯", "维罗纳", "帕多瓦"],
-      "皮埃蒙特": ["都灵", "阿尔巴", "阿斯蒂"],
-      "艾米利亚-罗马涅": ["博洛尼亚", "帕尔马", "摩德纳"],
-      "坎帕尼亚": ["那不勒斯", "萨莱诺", "阿马尔菲"],
-      "利古里亚": ["热那亚", "拉斯佩齐亚", "圣雷莫"],
-      "普利亚": ["巴里", "莱切", "阿尔贝罗贝洛"],
-      "特伦蒂诺-上阿迪杰": ["博尔扎诺", "特伦托", "奥尔蒂塞伊"]
-    };
-    const scenicMap = {
-      "罗马": [
-        ["罗马斗兽场", "Colosseum", "2.0公里", "约18欧元/人"], ["古罗马广场", "Roman Forum", "1.9公里", "约18欧元/人"],
-        ["万神殿", "Pantheon", "0.8公里", "免费"], ["特莱维喷泉", "Trevi Fountain", "0.9公里", "免费"],
-        ["西班牙广场", "Spanish Steps", "1.2公里", "免费"], ["纳沃纳广场", "Piazza Navona", "0.7公里", "免费"],
-        ["梵蒂冈博物馆", "Vatican Museums", "3.2公里", "约20欧元/人"], ["圣彼得大教堂", "St. Peter's Basilica", "3.1公里", "免费"],
-        ["圣天使堡", "Castel Sant'Angelo", "2.5公里", "约15欧元/人"], ["博尔盖塞美术馆", "Borghese Gallery", "2.8公里", "约17欧元/人"],
-        ["真理之口", "Bocca della Verità", "2.1公里", "免费"], ["人民广场", "Piazza del Popolo", "1.6公里", "免费"],
-        ["卡拉卡拉浴场", "Baths of Caracalla", "3.7公里", "约10欧元/人"], ["图拉真市场", "Trajan's Market", "1.8公里", "约13欧元/人"],
-        ["天使与殉教者圣母大殿", "Basilica of St. Mary of the Angels", "1.9公里", "免费"], ["阿庇亚古道公园", "Appian Way Park", "6.0公里", "免费"]
-      ],
-      "米兰": [
-        ["米兰大教堂", "Duomo di Milano", "0.4公里", "约15欧元/人"], ["埃马努埃莱二世长廊", "Galleria Vittorio Emanuele II", "0.3公里", "免费"],
-        ["斯福尔扎城堡", "Sforza Castle", "1.3公里", "约5欧元/人"], ["森皮奥内公园", "Sempione Park", "1.5公里", "免费"],
-        ["布雷拉美术馆", "Pinacoteca di Brera", "1.0公里", "约15欧元/人"], ["最后的晚餐", "The Last Supper", "2.0公里", "约15欧元/人"],
-        ["纳维利运河区", "Navigli District", "2.6公里", "免费"], ["和平门", "Arco della Pace", "1.8公里", "免费"],
-        ["现代艺术馆", "GAM Milano", "1.9公里", "约10欧元/人"], ["圣西罗球场", "San Siro Stadium", "5.5公里", "约30欧元/人"],
-        ["垂直森林", "Bosco Verticale", "2.7公里", "免费"], ["米兰公墓纪念园", "Monumental Cemetery", "3.1公里", "免费"],
-        ["布宜诺斯艾利斯大街", "Corso Buenos Aires", "2.9公里", "免费"], ["雷奥纳多科学技术博物馆", "Leonardo da Vinci Museum of Science and Technology", "2.2公里", "约12欧元/人"],
-        ["二十世纪博物馆", "Museo del Novecento", "0.5公里", "约10欧元/人"]
-      ],
-      "佛罗伦萨": [
-        ["圣母百花大教堂", "Cathedral of Santa Maria del Fiore", "0.3公里", "免费"], ["乌菲兹美术馆", "Uffizi Gallery", "0.6公里", "约25欧元/人"],
-        ["老桥", "Ponte Vecchio", "0.7公里", "免费"], ["领主广场", "Piazza della Signoria", "0.5公里", "免费"],
-        ["学院美术馆", "Accademia Gallery", "0.8公里", "约16欧元/人"], ["米开朗基罗广场", "Piazzale Michelangelo", "1.8公里", "免费"],
-        ["皮蒂宫", "Pitti Palace", "1.2公里", "约16欧元/人"], ["波波里花园", "Boboli Gardens", "1.4公里", "约11欧元/人"],
-        ["圣十字教堂", "Basilica of Santa Croce", "1.0公里", "约8欧元/人"], ["中央市场", "Mercato Centrale", "1.1公里", "免费"],
-        ["新圣母玛利亚教堂", "Santa Maria Novella", "0.9公里", "约7欧元/人"], ["共和广场", "Piazza della Repubblica", "0.4公里", "免费"],
-        ["巴杰罗美术馆", "Bargello Museum", "0.7公里", "约12欧元/人"], ["圣洛伦佐教堂", "Basilica of San Lorenzo", "0.6公里", "约9欧元/人"],
-        ["菲耶索莱观景点", "Fiesole Viewpoint", "7.5公里", "免费"]
-      ],
-      "威尼斯": [
-        ["圣马可广场", "Piazza San Marco", "0.2公里", "免费"], ["圣马可大教堂", "St. Mark's Basilica", "0.2公里", "约6欧元/人"],
-        ["总督宫", "Doge's Palace", "0.2公里", "约30欧元/人"], ["叹息桥", "Bridge of Sighs", "0.2公里", "免费"],
-        ["里亚托桥", "Rialto Bridge", "0.9公里", "免费"], ["大运河", "Grand Canal", "0.5公里", "免费"],
-        ["学院美术馆", "Gallerie dell'Accademia", "1.0公里", "约15欧元/人"], ["彩色岛", "Burano", "8.0公里", "免费"],
-        ["玻璃岛", "Murano", "3.5公里", "免费"], ["凤凰歌剧院", "Teatro La Fenice", "0.6公里", "约12欧元/人"],
-        ["安康圣母圣殿", "Basilica di Santa Maria della Salute", "1.1公里", "免费"], ["弗拉里荣耀圣母堂", "Basilica dei Frari", "1.3公里", "约5欧元/人"],
-        ["佩吉古根海姆美术馆", "Peggy Guggenheim Collection", "1.0公里", "约16欧元/人"], ["军械库区", "Arsenale", "1.7公里", "免费"],
-        ["卡纳雷吉欧区", "Cannaregio", "1.8公里", "免费"]
-      ]
-    };
-    const zhEnCity = {
-      "罗马": "Rome", "米兰": "Milan", "佛罗伦萨": "Florence", "威尼斯": "Venice", "那不勒斯": "Naples", "都灵": "Turin", "博洛尼亚": "Bologna", "比萨": "Pisa", "维罗纳": "Verona", "锡耶纳": "Siena", "热那亚": "Genoa", "巴里": "Bari", "奥尔蒂塞伊": "Ortisei",
-      "北京": "Beijing", "上海": "Shanghai", "广州": "Guangzhou", "深圳": "Shenzhen", "成都": "Chengdu", "杭州": "Hangzhou", "重庆": "Chongqing", "南京": "Nanjing", "武汉": "Wuhan", "西安": "Xi'an", "苏州": "Suzhou", "天津": "Tianjin"
-    };
+    const {
+      schengenCountries = [],
+      countryCityMap = {},
+      italianRegions = {},
+      scenicMap = {},
+      zhEnCity = {},
+      crossCityTime = {}
+    } = window.SCHENGEN_DATA || {};
     const scenicNameMap = {};
     Object.values(scenicMap).flat().forEach(it => scenicNameMap[it[0]] = it[1]);
     const transportOptions = ["飞机", "火车", "汽车", "地铁", "步行", "公交", "轮渡", "出租车"];
-    const crossCityTime = {
-      "罗马-佛罗伦萨": "火车平均约1.5小时", "佛罗伦萨-威尼斯": "火车平均约2.1小时", "米兰-佛罗伦萨": "火车平均约1.9小时", "米兰-威尼斯": "火车平均约2.5小时", "罗马-米兰": "高铁平均约3.2小时"
-    };
     const cnGeo = {
       "四川省": { "成都市": ["锦江区", "青羊区", "武侯区"], "绵阳市": ["涪城区", "游仙区"], "乐山市": ["市中区", "沙湾区"] },
       "广东省": { "广州市": ["天河区", "越秀区", "海珠区"], "深圳市": ["南山区", "福田区", "罗湖区"], "珠海市": ["香洲区", "斗门区"] },
