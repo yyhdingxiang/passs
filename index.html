@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>意大利申根签证材料AI生成助手</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1f2a37;
+      --sub: #5b6472;
+      --primary: #1d4ed8;
+      --primary-light: #e7efff;
+      --line: #d9e2f1;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --ok: #166534;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .container {
+      width: min(1200px, 94vw);
+      margin: 0 auto;
+      padding: 16px 0 40px;
+    }
+    .top-disclaimer {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: var(--warn);
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(8, 28, 64, 0.04);
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: var(--sub);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    .link-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+      margin: 10px 0 8px;
+    }
+    .link-btn, button, .btn {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .link-btn:hover, button:hover, .btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .primary:hover {
+      filter: brightness(1.03);
+      color: white;
+    }
+    nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .tab-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: #bfdbfe;
+      font-weight: 600;
+    }
+    .hidden { display: none !important; }
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: 10px;
+    }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 11px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+    }
+    textarea { min-height: 84px; resize: vertical; }
+    .hint {
+      color: var(--sub);
+      font-size: 12px;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .warn {
+      color: var(--warn);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .danger {
+      color: var(--danger);
+      font-weight: 700;
+    }
+    .row {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #fcfdff;
+    }
+    .row-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 12px;
+    }
+    .scenic-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      max-height: 190px;
+      overflow: auto;
+      background: #fff;
+    }
+    .scenic-item {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 8px;
+      margin-bottom: 6px;
+      align-items: start;
+      font-size: 13px;
+    }
+    .inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .result-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      min-height: 180px;
+      padding: 10px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 8px;
+      vertical-align: top;
+    }
+    th { background: #f8fafc; }
+    .admin-table td, .admin-table th {
+      font-size: 13px;
+    }
+    .material-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      align-items: start;
+      background: #fff;
+    }
+    .tag {
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      border: 1px solid;
+      margin-left: 8px;
+    }
+    .tag.must {
+      color: #0f766e;
+      border-color: #5eead4;
+      background: #f0fdfa;
+    }
+    .tag.opt {
+      color: #6b21a8;
+      border-color: #d8b4fe;
+      background: #faf5ff;
+    }
+    footer {
+      margin-top: 20px;
+      color: #475569;
+      text-align: center;
+      font-size: 13px;
+    }
+    .small {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 6px 10px;
+    }
+    .checkbox-group {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+      max-height: 170px;
+      overflow: auto;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .checkbox-item input {
+      width: auto;
+      margin-top: 2px;
+    }
+    .bottom-links {
+      margin-top: 12px;
+    }
+    @media (max-width: 700px) {
+      h1 { font-size: 23px; }
+      .container { width: 95vw; }
+      .link-btn, button, .btn { width: 100%; }
+      nav .tab-btn { flex: 1 1 45%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-disclaimer">免责声明：本工具仅作为签证申请材料辅助生成工具，不具备保证签证通过的效力，最终签证审核结果以领馆官方判定为准。</div>
+    <section class="card">
+      <h1>意大利申根签证材料AI生成助手</h1>
+      <div class="subtitle">本网站用于高效生成意大利申根签证常用材料，包括签证行程单、签证解释信与材料准备清单，支持中文/英文双语输出、在线编辑、复制与下载。</div>
+      <nav>
+        <button class="tab-btn active" data-tab="itinerary">行程单生成</button>
+        <button class="tab-btn" data-tab="letter">解释信生成</button>
+        <button class="tab-btn" data-tab="checklist">材料清单</button>
+        <button class="tab-btn" data-tab="feedback">反馈表单</button>
+        <button class="tab-btn" data-tab="community">经验交流</button>
+        <button class="tab-btn" data-tab="admin">开发者后台</button>
+      </nav>
+    </section>
+
+    <section id="itinerary" class="card tab-panel">
+      <h2 class="section-title">签证行程单生成</h2>
+      <div class="grid-3">
+        <div>
+          <label>申请人姓名</label>
+          <input id="applicantName" placeholder="请输入姓名">
+        </div>
+        <div>
+          <label>护照号</label>
+          <input id="passportNo" placeholder="请输入护照号">
+        </div>
+        <div>
+          <label>出发地（中国国/省/市/县）</label>
+          <select id="originProvince"></select>
+          <select id="originCity" style="margin-top:6px;"></select>
+          <select id="originCounty" style="margin-top:6px;"></select>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top:10px;">
+        <div>
+          <label>去程日期</label>
+          <input id="tripStartDate" type="date">
+        </div>
+        <div>
+          <label>返程日期</label>
+          <input id="tripEndDate" type="date">
+        </div>
+        <div class="inline" style="align-items:flex-end;">
+          <button id="autoBuildDaysBtn" class="primary">按往返日期自动生成行程天数</button>
+        </div>
+      </div>
+      <div class="hint">仅供参考：下拉数据为高频城市示例，建议按签证中心要求核对出发地与交通凭证一致性。</div>
+      <div style="margin-top:12px;">
+        <button id="addDayBtn" class="primary">新增一天行程</button>
+        <button id="generateItineraryBtn">生成中英文行程单</button>
+      </div>
+      <div id="dayRows" style="margin-top:10px;"></div>
+      <div class="warn">提示：景点、交通时间、票价等均为仅供参考信息，请以实时官方渠道数据为准。</div>
+      <div class="grid-2" style="margin-top:12px;">
+        <div>
+          <div class="result-head">
+            <strong>中文版（可编辑）</strong>
+            <div class="inline">
+              <button data-copy="zhItinerary">复制中文</button>
+              <button data-download="zhItineraryDocx">下载中文 .docx</button>
+              <button data-download="zhItineraryPdf">下载中文 .pdf</button>
+              <button data-download="itineraryBothDocx">中英同时下载 .docx</button>
+              <button data-download="itineraryBothPdf">中英同时下载 .pdf</button>
+            </div>
+          </div>
+          <div id="zhItinerary" class="result-box" contenteditable="true"></div>
+        </div>
+        <div>
+          <div class="result-head">
+            <strong>英文版（可编辑）</strong>
+            <div class="inline">
+              <button data-copy="enItinerary">复制英文</button>
+              <button data-download="enItineraryDocx">下载英文 .docx</button>
+              <button data-download="enItineraryPdf">下载英文 .pdf</button>
+            </div>
+          </div>
+          <div id="enItinerary" class="result-box" contenteditable="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="letter" class="card tab-panel hidden">
+      <h2 class="section-title">签证解释信生成</h2>
+      <div class="grid-2">
+        <div>
+          <label>姓名</label>
+          <input id="letterName" placeholder="请输入姓名">
+        </div>
+        <div>
+          <label>出行目的</label>
+          <select id="travelPurpose">
+            <option>旅游</option>
+            <option>商务</option>
+            <option>探亲</option>
+            <option>访友</option>
+            <option>文化交流</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>回国保证（复选框可多选）</label>
+        <div id="guaranteeBox" class="checkbox-group"></div>
+        <input id="customGuarantee" style="margin-top:8px;" placeholder="手动添加回国保证语句后点击添加">
+        <button id="addGuaranteeBtn" style="margin-top:8px;">添加保证语句</button>
+      </div>
+      <div style="margin-top:10px;">
+        <label>其他需解释内容</label>
+        <textarea id="otherExplain" placeholder="例如：无业说明、资产来源说明、同行安排、回国约束等"></textarea>
+      </div>
+      <div style="margin-top:10px;">
+        <button id="generateLetterBtn" class="primary">生成中英文解释信</button>
+      </div>
+      <div class="danger" style="margin-top:10px;">解释信结尾需手写签名，请打印后务必手写签名再提交至领馆。</div>
+      <div class="grid-2" style="margin-top:12px;">
+        <div>
+          <div class="result-head">
+            <strong>中文版（可编辑）</strong>
+            <div class="inline">
+              <button data-copy="zhLetter">复制中文</button>
+              <button data-download="zhLetterDocx">下载中文 .docx</button>
+              <button data-download="zhLetterPdf">下载中文 .pdf</button>
+              <button data-download="letterBothDocx">中英同时下载 .docx</button>
+              <button data-download="letterBothPdf">中英同时下载 .pdf</button>
+            </div>
+          </div>
+          <div id="zhLetter" class="result-box" contenteditable="true"></div>
+        </div>
+        <div>
+          <div class="result-head">
+            <strong>英文版（可编辑）</strong>
+            <div class="inline">
+              <button data-copy="enLetter">复制英文</button>
+              <button data-download="enLetterDocx">下载英文 .docx</button>
+              <button data-download="enLetterPdf">下载英文 .pdf</button>
+            </div>
+          </div>
+          <div id="enLetter" class="result-box" contenteditable="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="checklist" class="card tab-panel hidden">
+      <h2 class="section-title">签证申请材料准备清单</h2>
+      <div id="checklistBox"></div>
+      <div class="small">可勾选已完成材料，状态会保存在当前浏览器。</div>
+    </section>
+
+    <section id="feedback" class="card tab-panel hidden">
+      <h2 class="section-title">反馈表单</h2>
+      <div class="grid-2">
+        <div>
+          <label>姓名</label>
+          <input id="fbName" placeholder="请输入姓名">
+        </div>
+        <div>
+          <label>联系方式（邮箱或手机号）</label>
+          <input id="fbContact" placeholder="请输入联系方式">
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>问题/建议描述</label>
+        <textarea id="fbMessage" placeholder="请输入详细描述"></textarea>
+      </div>
+      <button id="submitFeedbackBtn" class="primary" style="margin-top:10px;">提交反馈</button>
+      <div id="fbStatus" class="hint"></div>
+    </section>
+
+    <section id="community" class="card tab-panel hidden">
+      <h2 class="section-title">经验交流</h2>
+      <div class="grid-2">
+        <div>
+          <label>昵称</label>
+          <input id="expName" placeholder="请输入昵称">
+        </div>
+        <div>
+          <label>联系方式（可选）</label>
+          <input id="expContact" placeholder="用于回访，可选">
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>经验内容</label>
+        <textarea id="expContent" placeholder="分享你的准备经验与注意事项"></textarea>
+      </div>
+      <button id="submitExpBtn" class="primary" style="margin-top:10px;">提交经验（待审核）</button>
+      <div id="expStatus" class="hint"></div>
+      <h3 style="margin:14px 0 8px;">已展示经验</h3>
+      <div id="approvedExpBox"></div>
+    </section>
+
+    <section id="admin" class="card tab-panel hidden">
+      <h2 class="section-title">开发者后台</h2>
+      <div class="hint">反馈汇总与经验审核均在此页面进行。点击“邮件回复”可直接调用默认邮箱客户端。</div>
+      <h3 style="margin:12px 0 8px;">反馈列表</h3>
+      <div id="adminFeedbackBox"></div>
+      <h3 style="margin:12px 0 8px;">经验审核</h3>
+      <div id="adminExpBox"></div>
+    </section>
+    <section class="card bottom-links">
+      <div class="link-row">
+        <a class="link-btn" href="https://www.google.com/maps" target="_blank" rel="noopener">Google Map 官方链接</a>
+        <a class="link-btn" href="https://visa.vfsglobal.com/chn/zh/ita/" target="_blank" rel="noopener">VFS 申根签证官方材料链接</a>
+      </div>
+      <div class="inline">
+        <a class="btn primary" href="#feedback" id="feedbackJump">如有疑问或宝贵建议，请点击此处填写</a>
+      </div>
+      <h3 style="margin:12px 0 8px;">首页经验交流专栏（审核后展示）</h3>
+      <div id="homeApprovedExpBox" class="small">暂无已审核经验。</div>
+    </section>
+    <footer>本工具为辅助生成平台，所有信息请以领馆与VFS官方要求为准。</footer>
+  </div>
+
+  <script>
+    const weekCN = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    const weekEN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const schengenCountries = ["奥地利", "比利时", "捷克", "丹麦", "爱沙尼亚", "芬兰", "法国", "德国", "希腊", "匈牙利", "冰岛", "意大利", "拉脱维亚", "列支敦士登", "立陶宛", "卢森堡", "马耳他", "荷兰", "挪威", "波兰", "葡萄牙", "斯洛伐克", "斯洛文尼亚", "西班牙", "瑞典", "瑞士"];
+    const countryCityMap = {
+      "中国": ["北京", "上海", "广州", "深圳", "成都", "杭州", "重庆", "南京", "武汉", "西安", "苏州", "天津"],
+      "意大利": ["罗马", "米兰", "佛罗伦萨", "威尼斯", "那不勒斯", "都灵", "博洛尼亚", "比萨", "维罗纳", "锡耶纳", "热那亚", "巴里", "奥尔蒂塞伊"],
+      "法国": ["巴黎", "里昂", "马赛", "尼斯", "图卢兹", "波尔多"],
+      "德国": ["柏林", "慕尼黑", "法兰克福", "汉堡", "科隆"],
+      "西班牙": ["马德里", "巴塞罗那", "塞维利亚", "瓦伦西亚", "马拉加"],
+      "瑞士": ["苏黎世", "日内瓦", "卢塞恩", "因特拉肯", "伯尔尼"]
+    };
+    schengenCountries.forEach(c => {
+      if (!countryCityMap[c]) countryCityMap[c] = ["首都", "主要城市1", "主要城市2"];
+    });
+    const italianRegions = {
+      "拉齐奥": ["罗马", "蒂沃利", "奇维塔韦基亚"],
+      "伦巴第": ["米兰", "贝加莫", "科莫"],
+      "托斯卡纳": ["佛罗伦萨", "比萨", "锡耶纳"],
+      "威尼托": ["威尼斯", "维罗纳", "帕多瓦"],
+      "皮埃蒙特": ["都灵", "阿尔巴", "阿斯蒂"],
+      "艾米利亚-罗马涅": ["博洛尼亚", "帕尔马", "摩德纳"],
+      "坎帕尼亚": ["那不勒斯", "萨莱诺", "阿马尔菲"],
+      "利古里亚": ["热那亚", "拉斯佩齐亚", "圣雷莫"],
+      "普利亚": ["巴里", "莱切", "阿尔贝罗贝洛"],
+      "特伦蒂诺-上阿迪杰": ["博尔扎诺", "特伦托", "奥尔蒂塞伊"]
+    };
+    const scenicMap = {
+      "罗马": [
+        ["罗马斗兽场", "Colosseum", "2.0公里", "约18欧元/人"], ["古罗马广场", "Roman Forum", "1.9公里", "约18欧元/人"],
+        ["万神殿", "Pantheon", "0.8公里", "免费"], ["特莱维喷泉", "Trevi Fountain", "0.9公里", "免费"],
+        ["西班牙广场", "Spanish Steps", "1.2公里", "免费"], ["纳沃纳广场", "Piazza Navona", "0.7公里", "免费"],
+        ["梵蒂冈博物馆", "Vatican Museums", "3.2公里", "约20欧元/人"], ["圣彼得大教堂", "St. Peter's Basilica", "3.1公里", "免费"],
+        ["圣天使堡", "Castel Sant'Angelo", "2.5公里", "约15欧元/人"], ["博尔盖塞美术馆", "Borghese Gallery", "2.8公里", "约17欧元/人"],
+        ["真理之口", "Bocca della Verità", "2.1公里", "免费"], ["人民广场", "Piazza del Popolo", "1.6公里", "免费"],
+        ["卡拉卡拉浴场", "Baths of Caracalla", "3.7公里", "约10欧元/人"], ["图拉真市场", "Trajan's Market", "1.8公里", "约13欧元/人"],
+        ["天使与殉教者圣母大殿", "Basilica of St. Mary of the Angels", "1.9公里", "免费"], ["阿庇亚古道公园", "Appian Way Park", "6.0公里", "免费"]
+      ],
+      "米兰": [
+        ["米兰大教堂", "Duomo di Milano", "0.4公里", "约15欧元/人"], ["埃马努埃莱二世长廊", "Galleria Vittorio Emanuele II", "0.3公里", "免费"],
+        ["斯福尔扎城堡", "Sforza Castle", "1.3公里", "约5欧元/人"], ["森皮奥内公园", "Sempione Park", "1.5公里", "免费"],
+        ["布雷拉美术馆", "Pinacoteca di Brera", "1.0公里", "约15欧元/人"], ["最后的晚餐", "The Last Supper", "2.0公里", "约15欧元/人"],
+        ["纳维利运河区", "Navigli District", "2.6公里", "免费"], ["和平门", "Arco della Pace", "1.8公里", "免费"],
+        ["现代艺术馆", "GAM Milano", "1.9公里", "约10欧元/人"], ["圣西罗球场", "San Siro Stadium", "5.5公里", "约30欧元/人"],
+        ["垂直森林", "Bosco Verticale", "2.7公里", "免费"], ["米兰公墓纪念园", "Monumental Cemetery", "3.1公里", "免费"],
+        ["布宜诺斯艾利斯大街", "Corso Buenos Aires", "2.9公里", "免费"], ["雷奥纳多科学技术博物馆", "Leonardo da Vinci Museum of Science and Technology", "2.2公里", "约12欧元/人"],
+        ["二十世纪博物馆", "Museo del Novecento", "0.5公里", "约10欧元/人"]
+      ],
+      "佛罗伦萨": [
+        ["圣母百花大教堂", "Cathedral of Santa Maria del Fiore", "0.3公里", "免费"], ["乌菲兹美术馆", "Uffizi Gallery", "0.6公里", "约25欧元/人"],
+        ["老桥", "Ponte Vecchio", "0.7公里", "免费"], ["领主广场", "Piazza della Signoria", "0.5公里", "免费"],
+        ["学院美术馆", "Accademia Gallery", "0.8公里", "约16欧元/人"], ["米开朗基罗广场", "Piazzale Michelangelo", "1.8公里", "免费"],
+        ["皮蒂宫", "Pitti Palace", "1.2公里", "约16欧元/人"], ["波波里花园", "Boboli Gardens", "1.4公里", "约11欧元/人"],
+        ["圣十字教堂", "Basilica of Santa Croce", "1.0公里", "约8欧元/人"], ["中央市场", "Mercato Centrale", "1.1公里", "免费"],
+        ["新圣母玛利亚教堂", "Santa Maria Novella", "0.9公里", "约7欧元/人"], ["共和广场", "Piazza della Repubblica", "0.4公里", "免费"],
+        ["巴杰罗美术馆", "Bargello Museum", "0.7公里", "约12欧元/人"], ["圣洛伦佐教堂", "Basilica of San Lorenzo", "0.6公里", "约9欧元/人"],
+        ["菲耶索莱观景点", "Fiesole Viewpoint", "7.5公里", "免费"]
+      ],
+      "威尼斯": [
+        ["圣马可广场", "Piazza San Marco", "0.2公里", "免费"], ["圣马可大教堂", "St. Mark's Basilica", "0.2公里", "约6欧元/人"],
+        ["总督宫", "Doge's Palace", "0.2公里", "约30欧元/人"], ["叹息桥", "Bridge of Sighs", "0.2公里", "免费"],
+        ["里亚托桥", "Rialto Bridge", "0.9公里", "免费"], ["大运河", "Grand Canal", "0.5公里", "免费"],
+        ["学院美术馆", "Gallerie dell'Accademia", "1.0公里", "约15欧元/人"], ["彩色岛", "Burano", "8.0公里", "免费"],
+        ["玻璃岛", "Murano", "3.5公里", "免费"], ["凤凰歌剧院", "Teatro La Fenice", "0.6公里", "约12欧元/人"],
+        ["安康圣母圣殿", "Basilica di Santa Maria della Salute", "1.1公里", "免费"], ["弗拉里荣耀圣母堂", "Basilica dei Frari", "1.3公里", "约5欧元/人"],
+        ["佩吉古根海姆美术馆", "Peggy Guggenheim Collection", "1.0公里", "约16欧元/人"], ["军械库区", "Arsenale", "1.7公里", "免费"],
+        ["卡纳雷吉欧区", "Cannaregio", "1.8公里", "免费"]
+      ]
+    };
+    const zhEnCity = {
+      "罗马": "Rome", "米兰": "Milan", "佛罗伦萨": "Florence", "威尼斯": "Venice", "那不勒斯": "Naples", "都灵": "Turin", "博洛尼亚": "Bologna", "比萨": "Pisa", "维罗纳": "Verona", "锡耶纳": "Siena", "热那亚": "Genoa", "巴里": "Bari", "奥尔蒂塞伊": "Ortisei",
+      "北京": "Beijing", "上海": "Shanghai", "广州": "Guangzhou", "深圳": "Shenzhen", "成都": "Chengdu", "杭州": "Hangzhou", "重庆": "Chongqing", "南京": "Nanjing", "武汉": "Wuhan", "西安": "Xi'an", "苏州": "Suzhou", "天津": "Tianjin"
+    };
+    const scenicNameMap = {};
+    Object.values(scenicMap).flat().forEach(it => scenicNameMap[it[0]] = it[1]);
+    const transportOptions = ["飞机", "火车", "汽车", "地铁", "步行", "公交", "轮渡", "出租车"];
+    const crossCityTime = {
+      "罗马-佛罗伦萨": "火车平均约1.5小时", "佛罗伦萨-威尼斯": "火车平均约2.1小时", "米兰-佛罗伦萨": "火车平均约1.9小时", "米兰-威尼斯": "火车平均约2.5小时", "罗马-米兰": "高铁平均约3.2小时"
+    };
+    const cnGeo = {
+      "四川省": { "成都市": ["锦江区", "青羊区", "武侯区"], "绵阳市": ["涪城区", "游仙区"], "乐山市": ["市中区", "沙湾区"] },
+      "广东省": { "广州市": ["天河区", "越秀区", "海珠区"], "深圳市": ["南山区", "福田区", "罗湖区"], "珠海市": ["香洲区", "斗门区"] },
+      "浙江省": { "杭州市": ["西湖区", "上城区", "滨江区"], "宁波市": ["海曙区", "江北区"], "温州市": ["鹿城区", "龙湾区"] },
+      "北京市": { "北京市": ["朝阳区", "海淀区", "东城区"] },
+      "上海市": { "上海市": ["浦东新区", "徐汇区", "静安区"] }
+    };
+    const checklistItems = [
+      ["护照原件及复印件", "必备", "护照有效期通常需覆盖行程结束后至少3个月"],
+      ["签证申请表", "必备", "需按真实信息完整填写"],
+      ["近期白底证件照", "必备", "一般为2寸白底免冠近照"],
+      ["往返机票预订单", "必备", "日期需与行程单一致"],
+      ["酒店预订单", "必备", "覆盖全部停留天数"],
+      ["签证行程单（中英文）", "必备", "建议行程逻辑清晰、交通可执行"],
+      ["签证解释信（中英文）", "可选", "建议用于说明特殊背景或补充信息"],
+      ["在职证明/在校证明/退休证明", "必备", "三选一或按个人身份提供"],
+      ["资产证明（银行流水、存款等）", "必备", "建议近期连续流水且余额合理"],
+      ["境外医疗保险单", "必备", "保险范围需覆盖申根区与出行日期"],
+      ["户口本复印件", "可选", "部分签证中心可能建议补充"],
+      ["结婚证或亲属关系证明", "可选", "探亲或家庭同行可补充"]
+    ];
+    const guarantees = [
+      "本人承诺按时回国，不逾期停留，严格遵守意大利及申根区相关法律法规。",
+      "本人在中国有稳定工作与社会关系，具备充分回国约束。",
+      "本人本次出行费用来源合法，已做好完整行程与预算安排。",
+      "本人将按提交行程访问，不从事与签证目的不符活动。",
+      "本人在中国有固定住所与长期居住安排，将按时返回居住地。",
+      "本人居住证不满一年，已附上有效在华居住及工作/学习证明。",
+      "本人本次出国目的明确，仅用于旅游/商务/探亲，不涉及滞留意图。",
+      "本人已购买覆盖全程的境外医疗保险，并预留足额应急资金。",
+      "本人家庭成员均在国内长期生活，本人需按时返国履行家庭责任。"
+    ];
+
+    let dayCount = 0;
+    const dayRows = document.getElementById("dayRows");
+    const tabs = document.querySelectorAll(".tab-btn");
+    const panels = document.querySelectorAll(".tab-panel");
+
+    tabs.forEach(btn => {
+      btn.addEventListener("click", () => {
+        tabs.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const t = btn.dataset.tab;
+        panels.forEach(p => p.classList.add("hidden"));
+        document.getElementById(t).classList.remove("hidden");
+      });
+    });
+    document.getElementById("feedbackJump").addEventListener("click", () => {
+      tabs.forEach(b => b.classList.remove("active"));
+      document.querySelector('[data-tab="feedback"]').classList.add("active");
+      panels.forEach(p => p.classList.add("hidden"));
+      document.getElementById("feedback").classList.remove("hidden");
+    });
+
+    const originProvince = document.getElementById("originProvince");
+    const originCity = document.getElementById("originCity");
+    const originCounty = document.getElementById("originCounty");
+    function fillOrigin() {
+      originProvince.innerHTML = Object.keys(cnGeo).map(p => `<option value="${p}">${p}</option>`).join("");
+      fillCity();
+      originProvince.addEventListener("change", fillCity);
+      originCity.addEventListener("change", fillCounty);
+    }
+    function fillCity() {
+      const p = originProvince.value;
+      const cities = Object.keys(cnGeo[p] || {});
+      originCity.innerHTML = cities.map(c => `<option value="${c}">${c}</option>`).join("");
+      fillCounty();
+    }
+    function fillCounty() {
+      const p = originProvince.value;
+      const c = originCity.value;
+      const counties = cnGeo[p]?.[c] || [];
+      originCounty.innerHTML = counties.map(x => `<option value="${x}">${x}</option>`).join("");
+    }
+    fillOrigin();
+    Object.keys(scenicMap).forEach(city => {
+      while (scenicMap[city].length < 15) {
+        const idx = scenicMap[city].length + 1;
+        scenicMap[city].push([`城市经典景点${idx}`, `City Landmark ${idx}`, `${2 + idx * 0.3}公里`, `约${8 + idx}欧元/人`]);
+      }
+    });
+
+    function cityToEn(name) {
+      return zhEnCity[name] || name;
+    }
+    function scenicToEn(name) {
+      return scenicNameMap[name] || asciiSafe(name) || "Custom Attraction";
+    }
+    function asciiSafe(text) {
+      return String(text || "").replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
+    }
+    function formatDateCN(dateStr) {
+      const d = new Date(dateStr);
+      const w = weekCN[d.getDay()];
+      return `${dateStr}（${w}）`;
+    }
+    function formatDateEN(dateStr) {
+      const d = new Date(dateStr);
+      const w = weekEN[d.getDay()];
+      return `${dateStr} (${w})`;
+    }
+    function createSelectOptions(arr, placeholder = "请选择") {
+      return `<option value="">${placeholder}</option>` + arr.map(i => `<option value="${i}">${i}</option>`).join("");
+    }
+    function renderCheckboxes(list, className) {
+      return list.map(i => `<label class="checkbox-item"><input type="checkbox" class="${className}" value="${i}"><span>${i}</span></label>`).join("");
+    }
+    function getCheckedValues(container, className) {
+      return [...container.querySelectorAll(`.${className}:checked`)].map(i => i.value);
+    }
+    function calcDayDates(start, end) {
+      const s = new Date(start);
+      const e = new Date(end);
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || s > e) return [];
+      const out = [];
+      const cur = new Date(s);
+      while (cur <= e) {
+        out.push(cur.toISOString().slice(0, 10));
+        cur.setDate(cur.getDate() + 1);
+      }
+      return out;
+    }
+
+    function addDayRow(presetDate = "") {
+      dayCount += 1;
+      const id = `day-${dayCount}`;
+      const div = document.createElement("div");
+      div.className = "row";
+      div.dataset.id = id;
+      div.innerHTML = `
+        <div class="row-title">
+          <span>第 ${dayCount} 天</span>
+          <span class="pill">建议每日景点 3-4 个</span>
+        </div>
+        <div class="grid-4">
+          <div>
+            <label>日期</label>
+            <input type="date" class="d-date" value="${presetDate}">
+          </div>
+          <div>
+            <label>国家（复选）</label>
+            <div class="checkbox-group d-country-box">${renderCheckboxes(["中国", ...schengenCountries], "d-country")}</div>
+          </div>
+          <div>
+            <label>意大利大区</label>
+            <select class="d-region">${createSelectOptions(Object.keys(italianRegions), "可选")}</select>
+          </div>
+          <div>
+            <label>城市（复选）</label>
+            <div class="checkbox-group d-city-box"></div>
+          </div>
+        </div>
+        <div class="grid-2 d-route-row hidden" style="margin-top:8px;">
+          <div>
+            <label>出发地（城市）</label>
+            <input class="d-depart" placeholder="如：罗马">
+          </div>
+          <div>
+            <label>到达地（城市）</label>
+            <input class="d-arrive" placeholder="如：佛罗伦萨">
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div>
+            <label>交通方式（多选）</label>
+            <div class="checkbox-group d-transport-box">${renderCheckboxes(transportOptions, "d-transport")}</div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div>
+            <label>住宿酒店名称</label>
+            <input class="d-hotel-name" placeholder="酒店名称">
+          </div>
+          <div>
+            <label>酒店联系方式</label>
+            <input class="d-hotel-contact" placeholder="电话或邮箱">
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <label>酒店地址</label>
+          <input class="d-hotel-address" placeholder="详细地址">
+        </div>
+        ${dayCount > 1 ? `<div class="inline" style="margin-top:8px;"><input type="checkbox" class="same-hotel" style="width:auto;"><span>与前一天住宿相同</span></div>` : ""}
+        <div class="grid-2" style="margin-top:8px;">
+          <div>
+            <label>系统推荐景点（勾选）</label>
+            <div class="scenic-box d-scenic-box"></div>
+          </div>
+          <div>
+            <label>手动输入景点（中文或英文，多个请用顿号/逗号分隔）</label>
+            <textarea class="d-custom-scenic" placeholder="如：圣天使堡，许愿池"></textarea>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div>
+            <label>若当日含飞机，请填写航班号</label>
+            <input class="d-flight-no" placeholder="如：CA949 / AZ731">
+          </div>
+          <div>
+            <label>若当日含飞机，请填写飞行时间</label>
+            <input class="d-flight-time" placeholder="如：11h 20m">
+          </div>
+        </div>
+        <div class="hint d-tip"></div>
+      `;
+      dayRows.appendChild(div);
+      const countryBox = div.querySelector(".d-country-box");
+      const regionSel = div.querySelector(".d-region");
+      const cityBox = div.querySelector(".d-city-box");
+      const scenicBox = div.querySelector(".d-scenic-box");
+      const routeRow = div.querySelector(".d-route-row");
+      function renderCities() {
+        const selectedCountries = getCheckedValues(div, "d-country");
+        const countryPool = selectedCountries.length ? selectedCountries : ["意大利"];
+        const citySet = new Set();
+        countryPool.forEach(ct => (countryCityMap[ct] || []).forEach(c => citySet.add(c)));
+        const rg = regionSel.value;
+        if (rg && italianRegions[rg]) italianRegions[rg].forEach(c => citySet.add(c));
+        cityBox.innerHTML = renderCheckboxes([...citySet], "d-city");
+        updateRouteRequirement();
+        fillScenic();
+      }
+      function updateRouteRequirement() {
+        const countries = getCheckedValues(div, "d-country");
+        const cities = getCheckedValues(div, "d-city");
+        const needRoute = countries.length > 1 || cities.length > 1;
+        routeRow.classList.toggle("hidden", !needRoute);
+        if (!needRoute && cities[0]) {
+          div.querySelector(".d-depart").value = cities[0];
+          div.querySelector(".d-arrive").value = cities[0];
+        }
+      }
+      function fillScenic() {
+        const city = getCheckedValues(div, "d-city")[0] || "";
+        const s = scenicMap[city] || [
+          ["地标景点A", "Landmark A", "2.0公里", "约12欧元/人"], ["地标景点B", "Landmark B", "1.5公里", "免费"], ["地标景点C", "Landmark C", "3.0公里", "约8欧元/人"], ["地标景点D", "Landmark D", "2.8公里", "约10欧元/人"], ["地标景点E", "Landmark E", "0.9公里", "免费"], ["地标景点F", "Landmark F", "4.2公里", "约16欧元/人"], ["地标景点G", "Landmark G", "1.8公里", "免费"], ["地标景点H", "Landmark H", "2.3公里", "约11欧元/人"], ["地标景点I", "Landmark I", "2.7公里", "约9欧元/人"], ["地标景点J", "Landmark J", "5.0公里", "约20欧元/人"], ["地标景点K", "Landmark K", "4.0公里", "约14欧元/人"], ["地标景点L", "Landmark L", "3.4公里", "约13欧元/人"], ["地标景点M", "Landmark M", "2.2公里", "约7欧元/人"], ["地标景点N", "Landmark N", "1.7公里", "免费"], ["地标景点O", "Landmark O", "3.1公里", "约18欧元/人"]
+        ];
+        scenicBox.innerHTML = s.map((x, idx) => `
+          <label class="scenic-item">
+            <input type="checkbox" class="d-scenic" value="${x[0]}" data-en="${x[1]}">
+            <span>${idx + 1}. ${x[0]} / ${x[1]}，距离市中心${x[2]}，门票${x[3]}（仅供参考）</span>
+          </label>
+        `).join("");
+      }
+      function updateTipPreview() {
+        const cities = getCheckedValues(div, "d-city");
+        const transports = getCheckedValues(div, "d-transport");
+        const from = div.querySelector(".d-depart").value.trim() || cities[0] || "";
+        const to = div.querySelector(".d-arrive").value.trim() || cities[cities.length - 1] || "";
+        const tipParts = [];
+        if (from && to && from !== to && transports.length) {
+          transports.forEach(t => {
+            const map = {
+              "飞机": "平均约1.2-2.0小时（不含值机）",
+              "火车": "平均约1.5-4.0小时",
+              "汽车": "平均约3.0-7.0小时",
+              "地铁": "适用于同城，通常0.2-1.2小时",
+              "步行": "适用于同城短途，通常0.2-2.0小时",
+              "公交": "适用于同城，通常0.4-1.8小时",
+              "轮渡": "沿海/岛屿线路约0.5-2.5小时",
+              "出租车": "同城约0.2-1.5小时"
+            };
+            tipParts.push(`${from}到${to}${t}${map[t] || "时长仅供参考"}`);
+          });
+        }
+        if (transports.includes("飞机")) {
+          tipParts.push("已选择飞机，请补充航班号与飞行时间；中国与意大利常见时差约6-7小时，请核对夏令时。");
+        }
+        div.querySelector(".d-tip").textContent = tipParts.join("；");
+      }
+      countryBox.addEventListener("change", renderCities);
+      regionSel.addEventListener("change", renderCities);
+      cityBox.addEventListener("change", () => {
+        updateRouteRequirement();
+        fillScenic();
+        updateTipPreview();
+      });
+      div.querySelector(".d-transport-box").addEventListener("change", updateTipPreview);
+      div.querySelector(".d-depart").addEventListener("input", updateTipPreview);
+      div.querySelector(".d-arrive").addEventListener("input", updateTipPreview);
+      renderCities();
+      const sameHotel = div.querySelector(".same-hotel");
+      if (sameHotel) {
+        sameHotel.addEventListener("change", () => {
+          if (!sameHotel.checked) return;
+          const prev = div.previousElementSibling;
+          if (!prev) return;
+          div.querySelector(".d-hotel-name").value = prev.querySelector(".d-hotel-name").value;
+          div.querySelector(".d-hotel-address").value = prev.querySelector(".d-hotel-address").value;
+          div.querySelector(".d-hotel-contact").value = prev.querySelector(".d-hotel-contact").value;
+        });
+      }
+    }
+    function rebuildDaysByRange() {
+      const start = document.getElementById("tripStartDate").value;
+      const end = document.getElementById("tripEndDate").value;
+      const days = calcDayDates(start, end);
+      if (!days.length) {
+        alert("请先正确选择去程和返程日期（返程日期需不早于去程日期）。");
+        return;
+      }
+      dayRows.innerHTML = "";
+      dayCount = 0;
+      days.forEach(d => addDayRow(d));
+    }
+    document.getElementById("addDayBtn").addEventListener("click", addDayRow);
+    document.getElementById("autoBuildDaysBtn").addEventListener("click", rebuildDaysByRange);
+    addDayRow();
+
+    function buildItinerary() {
+      const rows = [...document.querySelectorAll("#dayRows .row")];
+      const applicant = document.getElementById("applicantName").value || "未填写";
+      const passport = document.getElementById("passportNo").value || "未填写";
+      const origin = `${originProvince.value}${originCity.value}${originCounty.value}`;
+      let invalid = false;
+      const data = rows.map((r, i) => {
+        const date = r.querySelector(".d-date").value;
+        const selectedCountries = getCheckedValues(r, "d-country");
+        const selectedCities = getCheckedValues(r, "d-city");
+        const city = selectedCities[0] || "";
+        const cityLabelCN = selectedCities.length ? selectedCities.join(" / ") : "-";
+        const cityLabelEN = selectedCities.length ? selectedCities.map(cityToEn).join(" / ") : "-";
+        const needRoute = selectedCountries.length > 1 || selectedCities.length > 1;
+        const departInput = r.querySelector(".d-depart").value.trim();
+        const arriveInput = r.querySelector(".d-arrive").value.trim();
+        const depart = needRoute ? departInput : (city || "-");
+        const arrive = needRoute ? arriveInput : (city || "-");
+        if (needRoute && (!depart || !arrive)) {
+          invalid = true;
+          r.querySelector(".d-tip").textContent = "当前天选择了多个国家或城市，请确认并填写出发地与到达地。";
+        }
+        const transports = getCheckedValues(r, "d-transport");
+        const scenicChecked = [...r.querySelectorAll(".d-scenic:checked")].map(x => x.value);
+        const custom = (r.querySelector(".d-custom-scenic").value || "").split(/[，,、]/).map(s => s.trim()).filter(Boolean);
+        const scenicAll = [...new Set([...scenicChecked, ...custom])];
+        const hotelName = r.querySelector(".d-hotel-name").value || "-";
+        const hotelAddress = r.querySelector(".d-hotel-address").value || "-";
+        const hotelContact = r.querySelector(".d-hotel-contact").value || "-";
+        const flightNo = r.querySelector(".d-flight-no").value;
+        const flightTime = r.querySelector(".d-flight-time").value;
+        const prevPrimaryCity = i > 0 ? getCheckedValues(rows[i - 1], "d-city")[0] : "";
+        let transTip = "";
+        if (prevPrimaryCity && depart && prevPrimaryCity !== depart) {
+          const key = `${prevPrimaryCity}-${depart}`;
+          const rev = `${depart}-${prevPrimaryCity}`;
+          transTip = crossCityTime[key] || crossCityTime[rev] || `${prevPrimaryCity}到${city}跨城交通平均约2-5小时（仅供参考）`;
+        }
+        let planeTip = "";
+        if (transports.includes("飞机")) {
+          planeTip = "已选择飞机，请补充航班号与飞行时间；中国与意大利常见时差约6-7小时，请核对夏令时。";
+        }
+        if (transTip || planeTip) r.querySelector(".d-tip").textContent = [transTip, planeTip].filter(Boolean).join(" ");
+        return {
+          day: i + 1,
+          dateCN: date ? formatDateCN(date) : "-",
+          dateEN: date ? formatDateEN(date) : "-",
+          cityCN: cityLabelCN,
+          cityEN: cityLabelEN,
+          arriveCN: arrive || "-",
+          arriveEN: cityToEn(arrive || "-") || "N/A",
+          departCN: depart || "-",
+          departEN: cityToEn(depart || "-") || "N/A",
+          scenicCN: scenicAll.length ? scenicAll.join("；") : "-",
+          scenicEN: scenicAll.length ? scenicAll.map(scenicToEn).join("; ") : "-",
+          hotelCN: `酒店：${hotelName}；地址：${hotelAddress}；联系方式：${hotelContact}`,
+          hotelEN: `Hotel: ${hotelName}; Address: ${hotelAddress}; Contact: ${hotelContact}`,
+          transCN: transports.length ? transports.join(" + ") + (flightNo || flightTime ? `；航班号${flightNo || "-"}；飞行时间${flightTime || "-"}` : "") : "-",
+          transEN: transports.length ? transports.map(t => ({ "飞机": "Flight", "火车": "Train", "汽车": "Car", "地铁": "Metro", "步行": "Walking", "公交": "Bus", "轮渡": "Ferry", "出租车": "Taxi" }[t] || t)).join(" + ") + (flightNo || flightTime ? `; Flight No. ${flightNo || "-"}; Flight Time ${flightTime || "-"}` : "") : "-"
+        };
+      });
+      if (invalid) {
+        alert("存在需要确认出发地和到达地的行程天，请先补充后再生成。");
+        return;
+      }
+      const zh = `
+        <div><strong>意大利申根签证行程单（中文版）</strong></div>
+        <div>申请人：${applicant} ｜ 护照号：${passport} ｜ 出发地：${origin}</div>
+        <table>
+          <thead><tr><th>天数</th><th>日期（星期）</th><th>城市</th><th>景点</th><th>住宿</th><th>交通方式</th></tr></thead>
+          <tbody>
+            ${data.map(d => `<tr><td>${d.day}</td><td>${d.dateCN}</td><td>${d.departCN} → ${d.arriveCN}</td><td>${d.scenicCN}</td><td>${d.hotelCN}</td><td>${d.transCN}</td></tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+      const en = `
+        <div><strong>ITALY SCHENGEN VISA ITINERARY (ENGLISH)</strong></div>
+        <div>Applicant: ${asciiSafe(applicant) || "N/A"} | Passport No.: ${asciiSafe(passport) || "N/A"} | Departure: ${asciiSafe(cityToEn(originCity.value || "")) || "N/A"}, China</div>
+        <table>
+          <thead><tr><th>Day</th><th>Date (Weekday)</th><th>City</th><th>Attractions</th><th>Accommodation</th><th>Transportation</th></tr></thead>
+          <tbody>
+            ${data.map(d => `<tr><td>${d.day}</td><td>${asciiSafe(d.dateEN)}</td><td>${asciiSafe(d.departEN)} to ${asciiSafe(d.arriveEN)}</td><td>${asciiSafe(d.scenicEN)}</td><td>${asciiSafe(d.hotelEN)}</td><td>${asciiSafe(d.transEN)}</td></tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+      document.getElementById("zhItinerary").innerHTML = zh;
+      document.getElementById("enItinerary").innerHTML = en;
+    }
+    document.getElementById("generateItineraryBtn").addEventListener("click", buildItinerary);
+
+    const guaranteeBox = document.getElementById("guaranteeBox");
+    function renderGuarantees(extra = []) {
+      const list = [...guarantees, ...extra];
+      guaranteeBox.innerHTML = list.map((g, i) => `<label class="checkbox-item"><input type="checkbox" class="g-item" value="${i}"><span>${g}</span></label>`).join("");
+    }
+    let extraGuarantees = JSON.parse(localStorage.getItem("extraGuarantees") || "[]");
+    renderGuarantees(extraGuarantees);
+    document.getElementById("addGuaranteeBtn").addEventListener("click", () => {
+      const v = document.getElementById("customGuarantee").value.trim();
+      if (!v) return;
+      extraGuarantees.push(v);
+      localStorage.setItem("extraGuarantees", JSON.stringify(extraGuarantees));
+      renderGuarantees(extraGuarantees);
+      document.getElementById("customGuarantee").value = "";
+    });
+
+    function buildLetter() {
+      const name = document.getElementById("letterName").value || "申请人";
+      const purpose = document.getElementById("travelPurpose").value;
+      const allGuarantees = [...guarantees, ...extraGuarantees];
+      const selected = [...document.querySelectorAll(".g-item:checked")].map(v => allGuarantees[Number(v.value)]).filter(Boolean);
+      const other = document.getElementById("otherExplain").value.trim() || "无";
+      const zh = `
+        <div><strong>签证解释信（中文版）</strong></div>
+        <p>尊敬的签证官：</p>
+        <p>您好！本人${name}，本次前往意大利及申根区的主要目的为${purpose}。现就本人出行安排及相关情况说明如下：</p>
+        <p>1. 行程安排：本人已准备完整且可执行的往返行程、住宿与交通安排，并将严格按计划出行。</p>
+        <p>2. 回国保证：${selected.length ? selected.join("；") : "本人承诺按时回国，不逾期停留，严格遵守当地法律法规。"} </p>
+        <p>3. 其他说明：${other}</p>
+        <p>本人保证上述信息真实、准确、完整，恳请贵馆审理本人的签证申请。</p>
+        <p>此致<br>敬礼</p>
+        <p>申请人：${name}<br>日期：${new Date().toISOString().slice(0, 10)}</p>
+      `;
+      const purposeMap = { "旅游": "tourism", "商务": "business", "探亲": "family visit", "访友": "friend visit", "文化交流": "cultural exchange" };
+      const enGuarantee = selected.length ? selected.map(s => s
+        .replace("本人承诺按时回国，不逾期停留，严格遵守意大利及申根区相关法律法规。", "I undertake to return to China on time, without overstaying, and to strictly comply with Italian and Schengen laws.")
+        .replace("本人在中国有稳定工作与社会关系，具备充分回国约束。", "I have stable employment and social ties in China, which provide strong return constraints.")
+        .replace("本人本次出行费用来源合法，已做好完整行程与预算安排。", "My travel funds are from legal sources, and I have prepared a complete itinerary and budget.")
+        .replace("本人将按提交行程访问，不从事与签证目的不符活动。", "I will follow the submitted itinerary and will not engage in activities inconsistent with the visa purpose.")
+      ).join(" ") : "I undertake to return to China on time, without overstaying, and to comply with all applicable laws.";
+      const en = `
+        <div><strong>Visa Explanation Letter (English)</strong></div>
+        <p>Dear Visa Officer,</p>
+        <p>My name is ${asciiSafe(name) || "Applicant"}. The main purpose of my trip to Italy and the Schengen area is ${purposeMap[purpose] || "tourism"}.</p>
+        <p>1. Travel Plan: I have prepared a complete and feasible round-trip itinerary, accommodation, and transportation plan, and I will travel accordingly.</p>
+        <p>2. Return Commitment: ${asciiSafe(enGuarantee)}</p>
+        <p>3. Additional Explanation: ${other === "无" ? "None." : asciiSafe(other)}</p>
+        <p>I hereby confirm that all information above is true, accurate, and complete. I respectfully request your kind consideration of my visa application.</p>
+        <p>Sincerely,</p>
+        <p>Applicant: ${asciiSafe(name) || "Applicant"}<br>Date: ${new Date().toISOString().slice(0, 10)}</p>
+      `;
+      document.getElementById("zhLetter").innerHTML = zh;
+      document.getElementById("enLetter").innerHTML = en;
+    }
+    document.getElementById("generateLetterBtn").addEventListener("click", buildLetter);
+
+    function renderChecklist() {
+      const box = document.getElementById("checklistBox");
+      const state = JSON.parse(localStorage.getItem("checkState") || "{}");
+      box.innerHTML = checklistItems.map((m, idx) => `
+        <label class="material-item">
+          <input type="checkbox" data-midx="${idx}" ${state[idx] ? "checked" : ""}>
+          <span>
+            <strong>${m[0]}</strong><span class="tag ${m[1] === "必备" ? "must" : "opt"}">${m[1]}</span>
+            <div class="small">${m[2]}</div>
+          </span>
+        </label>
+      `).join("");
+      box.querySelectorAll("input[type='checkbox']").forEach(c => {
+        c.addEventListener("change", () => {
+          state[c.dataset.midx] = c.checked;
+          localStorage.setItem("checkState", JSON.stringify(state));
+        });
+      });
+    }
+    renderChecklist();
+
+    function getFeedbacks() {
+      return JSON.parse(localStorage.getItem("feedbacks") || "[]");
+    }
+    function saveFeedbacks(v) {
+      localStorage.setItem("feedbacks", JSON.stringify(v));
+    }
+    document.getElementById("submitFeedbackBtn").addEventListener("click", () => {
+      const name = document.getElementById("fbName").value.trim();
+      const contact = document.getElementById("fbContact").value.trim();
+      const msg = document.getElementById("fbMessage").value.trim();
+      const status = document.getElementById("fbStatus");
+      if (!name || !contact || !msg) {
+        status.textContent = "请完整填写姓名、联系方式与问题/建议描述。";
+        status.style.color = "#b91c1c";
+        return;
+      }
+      const all = getFeedbacks();
+      all.unshift({ id: Date.now(), name, contact, msg, time: new Date().toLocaleString() });
+      saveFeedbacks(all);
+      status.textContent = "提交成功，感谢你的反馈。";
+      status.style.color = "#166534";
+      document.getElementById("fbName").value = "";
+      document.getElementById("fbContact").value = "";
+      document.getElementById("fbMessage").value = "";
+      renderAdminFeedback();
+    });
+
+    function getExps() {
+      return JSON.parse(localStorage.getItem("experiences") || "[]");
+    }
+    function saveExps(v) {
+      localStorage.setItem("experiences", JSON.stringify(v));
+    }
+    document.getElementById("submitExpBtn").addEventListener("click", () => {
+      const name = document.getElementById("expName").value.trim();
+      const contact = document.getElementById("expContact").value.trim();
+      const content = document.getElementById("expContent").value.trim();
+      const status = document.getElementById("expStatus");
+      if (!name || !content) {
+        status.textContent = "请至少填写昵称与经验内容。";
+        status.style.color = "#b91c1c";
+        return;
+      }
+      const list = getExps();
+      list.unshift({ id: Date.now(), name, contact, content, approved: false, time: new Date().toLocaleString() });
+      saveExps(list);
+      status.textContent = "提交成功，等待开发者审核后展示。";
+      status.style.color = "#166534";
+      document.getElementById("expName").value = "";
+      document.getElementById("expContact").value = "";
+      document.getElementById("expContent").value = "";
+      renderAdminExp();
+      renderApprovedExp();
+    });
+
+    function renderApprovedExp() {
+      const box = document.getElementById("approvedExpBox");
+      const homeBox = document.getElementById("homeApprovedExpBox");
+      const list = getExps().filter(i => i.approved);
+      if (!list.length) {
+        box.innerHTML = `<div class="small">暂无已审核经验。</div>`;
+        homeBox.innerHTML = `<div class="small">暂无已审核经验。</div>`;
+        return;
+      }
+      box.innerHTML = list.map(i => `<div class="row"><div><strong>${i.name}</strong> <span class="small">${i.time}</span></div><div style="margin-top:6px;">${i.content}</div></div>`).join("");
+      homeBox.innerHTML = list.slice(0, 3).map(i => `<div style="padding:8px 0;border-bottom:1px solid #e2e8f0;"><strong>${i.name}</strong>：${i.content}</div>`).join("");
+    }
+    renderApprovedExp();
+
+    function renderAdminFeedback() {
+      const box = document.getElementById("adminFeedbackBox");
+      const list = getFeedbacks();
+      if (!list.length) {
+        box.innerHTML = `<div class="small">暂无反馈。</div>`;
+        return;
+      }
+      box.innerHTML = `
+        <table class="admin-table">
+          <thead><tr><th>时间</th><th>姓名</th><th>联系方式</th><th>内容</th><th>操作</th></tr></thead>
+          <tbody>
+            ${list.map(i => `<tr><td>${i.time}</td><td>${i.name}</td><td>${i.contact}</td><td>${i.msg}</td><td><a class="btn" href="mailto:${i.contact}?subject=${encodeURIComponent("关于你的反馈回复")}&body=${encodeURIComponent("你好，" + i.name + "，\\n\\n感谢你的反馈：\\n" + i.msg + "\\n\\n回复如下：\\n")}">邮件回复</a></td></tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+    renderAdminFeedback();
+
+    function renderAdminExp() {
+      const box = document.getElementById("adminExpBox");
+      const list = getExps();
+      if (!list.length) {
+        box.innerHTML = `<div class="small">暂无经验投稿。</div>`;
+        return;
+      }
+      box.innerHTML = list.map(i => `
+        <div class="row">
+          <div><strong>${i.name}</strong> <span class="small">${i.time}</span> ${i.approved ? '<span class="pill">已通过</span>' : '<span class="pill" style="background:#fff7ed;border-color:#fdba74;color:#9a3412;">待审核</span>'}</div>
+          <div style="margin-top:6px;">${i.content}</div>
+          <div class="inline" style="margin-top:8px;">
+            <button data-exp-approve="${i.id}" ${i.approved ? "disabled" : ""}>通过</button>
+            <button data-exp-reject="${i.id}">删除</button>
+          </div>
+        </div>
+      `).join("");
+      box.querySelectorAll("[data-exp-approve]").forEach(b => {
+        b.addEventListener("click", () => {
+          const id = Number(b.dataset.expApprove);
+          const all = getExps().map(x => x.id === id ? { ...x, approved: true } : x);
+          saveExps(all);
+          renderAdminExp();
+          renderApprovedExp();
+        });
+      });
+      box.querySelectorAll("[data-exp-reject]").forEach(b => {
+        b.addEventListener("click", () => {
+          const id = Number(b.dataset.expReject);
+          const all = getExps().filter(x => x.id !== id);
+          saveExps(all);
+          renderAdminExp();
+          renderApprovedExp();
+        });
+      });
+    }
+    renderAdminExp();
+
+    function copyFrom(id) {
+      const node = document.getElementById(id);
+      const text = node.innerText || "";
+      navigator.clipboard.writeText(text);
+    }
+    function downloadAsDocx(id, filename) {
+      const html = document.getElementById(id).innerHTML || "";
+      const content = `<!doctype html><html><head><meta charset="UTF-8"></head><body>${html}</body></html>`;
+      const blob = new Blob(["\ufeff", content], { type: "application/msword" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function downloadAsPdf(id, title) {
+      const html = document.getElementById(id).innerHTML || "";
+      const w = window.open("", "_blank");
+      w.document.write(`<html><head><meta charset="UTF-8"><title>${title}</title><style>body{font-family:Arial,"PingFang SC","Microsoft YaHei";padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:6px;vertical-align:top}th{background:#f3f4f6}</style></head><body>${html}</body></html>`);
+      w.document.close();
+      w.focus();
+      w.print();
+    }
+
+    document.querySelectorAll("[data-copy]").forEach(b => {
+      b.addEventListener("click", () => copyFrom(b.dataset.copy));
+    });
+    document.querySelectorAll("[data-download]").forEach(b => {
+      b.addEventListener("click", () => {
+        const d = b.dataset.download;
+        if (d === "zhItineraryDocx") downloadAsDocx("zhItinerary", "意大利签证行程单_中文.doc");
+        if (d === "enItineraryDocx") downloadAsDocx("enItinerary", "Italy_Visa_Itinerary_English.doc");
+        if (d === "zhLetterDocx") downloadAsDocx("zhLetter", "签证解释信_中文.doc");
+        if (d === "enLetterDocx") downloadAsDocx("enLetter", "Visa_Explanation_Letter_English.doc");
+        if (d === "zhItineraryPdf") downloadAsPdf("zhItinerary", "意大利签证行程单_中文");
+        if (d === "enItineraryPdf") downloadAsPdf("enItinerary", "Italy_Visa_Itinerary_English");
+        if (d === "zhLetterPdf") downloadAsPdf("zhLetter", "签证解释信_中文");
+        if (d === "enLetterPdf") downloadAsPdf("enLetter", "Visa_Explanation_Letter_English");
+        if (d === "itineraryBothDocx") {
+          downloadAsDocx("zhItinerary", "意大利签证行程单_中文.doc");
+          setTimeout(() => downloadAsDocx("enItinerary", "Italy_Visa_Itinerary_English.doc"), 150);
+        }
+        if (d === "itineraryBothPdf") {
+          downloadAsPdf("zhItinerary", "意大利签证行程单_中文");
+          setTimeout(() => downloadAsPdf("enItinerary", "Italy_Visa_Itinerary_English"), 150);
+        }
+        if (d === "letterBothDocx") {
+          downloadAsDocx("zhLetter", "签证解释信_中文.doc");
+          setTimeout(() => downloadAsDocx("enLetter", "Visa_Explanation_Letter_English.doc"), 150);
+        }
+        if (d === "letterBothPdf") {
+          downloadAsPdf("zhLetter", "签证解释信_中文");
+          setTimeout(() => downloadAsPdf("enLetter", "Visa_Explanation_Letter_English"), 150);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
