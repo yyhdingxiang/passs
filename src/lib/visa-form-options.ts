@@ -19,8 +19,8 @@ export type CountryCityScenicSelection = {
   scenic: string;
 };
 
-export function buildCountryCityScenicOptions(): CascaderOption[] {
-  return Object.keys(countryCityMap).map((country) => ({
+export function buildCountryCityScenicOptions(countries = Object.keys(countryCityMap)): CascaderOption[] {
+  return countries.map((country) => ({
     value: country,
     label: country,
     textLabel: country,

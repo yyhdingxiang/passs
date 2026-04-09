@@ -86,11 +86,11 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
   };
 
   return (
-    <Card className="border-slate-200 bg-slate-50/60">
-      <CardHeader>
-        <CardTitle className="text-xl text-slate-900">基础信息</CardTitle>
+    <Card className="border-border bg-card shadow-none">
+      <CardHeader className="border-b border-border pb-4">
+        <CardTitle className="text-lg font-semibold text-foreground">基础信息</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <CardContent className="grid gap-5 pt-5 md:grid-cols-2 xl:grid-cols-4">
         <div className="space-y-1.5">
           <Label htmlFor="applicantName">申请人姓名</Label>
           <Input id="applicantName" placeholder="申请人姓名" value={applicantName} onChange={e => onApplicantNameChange(e.target.value)} />
@@ -104,7 +104,7 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
         <div className="space-y-1.5">
           <Label>出发省份</Label>
           <Select value={province} onValueChange={onProvinceChange}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-card">
               <SelectValue placeholder="选择省份" />
             </SelectTrigger>
             <SelectContent>
@@ -116,7 +116,7 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
         <div className="space-y-1.5">
           <Label>出发城市</Label>
           <Select value={city} onValueChange={onCityChange}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-card">
               <SelectValue placeholder="选择城市" />
             </SelectTrigger>
             <SelectContent>
@@ -129,16 +129,17 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
           <Label>出行日期</Label>
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger asChild>
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 className={cn(
-                  "flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-left text-sm shadow-xs transition-colors",
+                  "w-full justify-between bg-card px-3 text-left text-sm font-normal shadow-xs",
                   !selectedRange && "text-muted-foreground"
                 )}
               >
                 <span>{formatRangeLabel(selectedRange)}</span>
-                <CalendarDays className="size-4 shrink-0 text-slate-500" />
-              </button>
+                <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+              </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
@@ -155,20 +156,22 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
         <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2">
           <div className="space-y-1.5">
             <Label>出发日期</Label>
-            <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
               {formatFieldDate(tripStartDate)}
             </div>
           </div>
           <div className="space-y-1.5">
             <Label>返回日期</Label>
-            <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
               {formatFieldDate(tripEndDate)}
             </div>
           </div>
         </div>
 
         <div className="xl:col-span-4">
-          <Button variant="outline" onClick={onAutoBuildDays}>按日期范围自动生成天数</Button>
+          <Button variant="outline" className="bg-card" onClick={onAutoBuildDays}>
+            按日期范围自动生成天数
+          </Button>
         </div>
       </CardContent>
     </Card>

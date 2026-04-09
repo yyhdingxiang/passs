@@ -8,14 +8,14 @@ export type GeneratedPreviewProps = {
 
 export function GeneratedPreview({ title, html }: GeneratedPreviewProps) {
   return (
-    <Card className="border-slate-200 bg-white">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+    <Card className="border-border bg-card shadow-none">
+      <CardHeader className="border-b border-border pb-3">
+        <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="min-h-40 rounded-lg border border-slate-100 bg-slate-50">
+        <ScrollArea className="min-h-40 rounded-lg border border-border bg-muted/40">
           <div
-            className="min-h-40 p-3"
+            className="min-h-40 p-3 text-sm text-foreground"
             contentEditable
             suppressContentEditableWarning
             dangerouslySetInnerHTML={{ __html: html }}

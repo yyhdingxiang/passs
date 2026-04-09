@@ -135,9 +135,33 @@ export const cityAirportMap: Record<string, string[]> = {
 };
 
 export const zhEnCity: Record<string, string> = {
+  北京: "Beijing", 上海: "Shanghai", 广州: "Guangzhou", 深圳: "Shenzhen", 成都: "Chengdu", 杭州: "Hangzhou", 重庆: "Chongqing", 南京: "Nanjing", 武汉: "Wuhan", 西安: "Xi'an", 苏州: "Suzhou", 天津: "Tianjin",
+  维也纳: "Vienna", 萨尔茨堡: "Salzburg", 因斯布鲁克: "Innsbruck", 格拉茨: "Graz", 林茨: "Linz",
+  布鲁塞尔: "Brussels", 布鲁日: "Bruges", 根特: "Ghent", 安特卫普: "Antwerp", 列日: "Liege",
+  布拉格: "Prague", 布尔诺: "Brno", 卡罗维发利: "Karlovy Vary", 俄斯特拉发: "Ostrava", 奥洛穆茨: "Olomouc",
+  哥本哈根: "Copenhagen", 欧登塞: "Odense", 奥胡斯: "Aarhus", 奥尔堡: "Aalborg", 罗斯基勒: "Roskilde",
+  塔林: "Tallinn", 塔尔图: "Tartu", 帕尔努: "Parnu", 纳尔瓦: "Narva", 哈普萨卢: "Haapsalu",
+  赫尔辛基: "Helsinki", 图尔库: "Turku", 坦佩雷: "Tampere", 罗瓦涅米: "Rovaniemi", 奥卢: "Oulu",
+  巴黎: "Paris", 里昂: "Lyon", 马赛: "Marseille", 尼斯: "Nice", 图卢兹: "Toulouse", 波尔多: "Bordeaux",
+  柏林: "Berlin", 慕尼黑: "Munich", 法兰克福: "Frankfurt", 汉堡: "Hamburg", 科隆: "Cologne",
+  雅典: "Athens", 塞萨洛尼基: "Thessaloniki", 圣托里尼: "Santorini", 伊拉克利翁: "Heraklion", 帕特雷: "Patras",
+  布达佩斯: "Budapest", 德布勒森: "Debrecen", 塞格德: "Szeged", 佩奇: "Pecs", 杰尔: "Gyor",
+  雷克雅未克: "Reykjavik", 阿库雷里: "Akureyri", 凯夫拉维克: "Keflavik", 维克: "Vik", 赫本: "Hofn",
   罗马: "Rome", 米兰: "Milan", 佛罗伦萨: "Florence", 威尼斯: "Venice", 那不勒斯: "Naples", 都灵: "Turin", 博洛尼亚: "Bologna", 比萨: "Pisa", 维罗纳: "Verona", 锡耶纳: "Siena", 热那亚: "Genoa", 巴里: "Bari", 奥尔蒂塞伊: "Ortisei",
-  巴黎: "Paris", 柏林: "Berlin", 马德里: "Madrid", 阿姆斯特丹: "Amsterdam", 维也纳: "Vienna", 布拉格: "Prague", 里斯本: "Lisbon", 华沙: "Warsaw", 雅典: "Athens",
-  北京: "Beijing", 上海: "Shanghai", 广州: "Guangzhou", 深圳: "Shenzhen", 成都: "Chengdu", 杭州: "Hangzhou", 重庆: "Chongqing", 南京: "Nanjing", 武汉: "Wuhan", 西安: "Xi'an", 苏州: "Suzhou", 天津: "Tianjin"
+  里加: "Riga", 尤尔马拉: "Jurmala", 陶格夫匹尔斯: "Daugavpils", 利耶帕亚: "Liepaja", 文茨皮尔斯: "Ventspils",
+  瓦杜兹: "Vaduz", 沙恩: "Schaan", 特里森: "Triesen", 巴尔策斯: "Balzers", 毛伦: "Mauren",
+  维尔纽斯: "Vilnius", 考纳斯: "Kaunas", 克莱佩达: "Klaipeda", 希奥利艾: "Siauliai", 帕内韦日斯: "Panevezys",
+  卢森堡市: "Luxembourg City", 埃施: "Esch-sur-Alzette", 迪弗当日: "Differdange", 维安登: "Vianden", 埃希特纳赫: "Echternach",
+  瓦莱塔: "Valletta", 斯利马: "Sliema", 圣朱利安斯: "St. Julian's", 姆迪纳: "Mdina", 戈佐岛维多利亚: "Victoria (Gozo)",
+  阿姆斯特丹: "Amsterdam", 鹿特丹: "Rotterdam", 海牙: "The Hague", 乌得勒支: "Utrecht", 埃因霍温: "Eindhoven",
+  奥斯陆: "Oslo", 卑尔根: "Bergen", 特隆赫姆: "Trondheim", 斯塔万格: "Stavanger", 特罗姆瑟: "Tromso",
+  华沙: "Warsaw", 克拉科夫: "Krakow", 格但斯克: "Gdansk", 弗罗茨瓦夫: "Wroclaw", 波兹南: "Poznan",
+  里斯本: "Lisbon", 波尔图: "Porto", 法鲁: "Faro", 科英布拉: "Coimbra", 布拉加: "Braga",
+  布拉迪斯拉发: "Bratislava", 科希策: "Kosice", 日利纳: "Zilina", 特伦钦: "Trencin", 波普拉德: "Poprad",
+  卢布尔雅那: "Ljubljana", 布莱德: "Bled", 马里博尔: "Maribor", 皮兰: "Piran", 科佩尔: "Koper",
+  马德里: "Madrid", 巴塞罗那: "Barcelona", 塞维利亚: "Seville", 瓦伦西亚: "Valencia", 马拉加: "Malaga",
+  斯德哥尔摩: "Stockholm", 哥德堡: "Gothenburg", 马尔默: "Malmo", 乌普萨拉: "Uppsala", 林雪平: "Linkoping",
+  苏黎世: "Zurich", 日内瓦: "Geneva", 卢塞恩: "Lucerne", 因特拉肯: "Interlaken", 伯尔尼: "Bern"
 };
 
 export const crossCityTime: Record<string, string> = {

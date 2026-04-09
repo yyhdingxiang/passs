@@ -8,9 +8,9 @@ export function ShimmerButton({ children, className = "", ...props }: ShimmerBut
   return (
     <button
       {...props}
-      className={`relative overflow-hidden rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 ${className}`}
+      className={`relative overflow-hidden rounded-lg border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 ${className}`}
     >
-      <span className="absolute inset-0 -translate-x-full animate-[shimmer_2.2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+      <span className="absolute inset-0 -translate-x-full animate-[shimmer_2.6s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       <span className="relative">{children}</span>
     </button>
   );
