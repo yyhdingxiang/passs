@@ -5,6 +5,9 @@ import { AnimatedGridPattern } from "@/components/magicui/animated-grid-pattern"
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MagicCard } from "@/components/magicui/magic-card";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
+import { GeneratedPreview } from "@/components/visa-form/generated-preview";
+import { ItineraryToolbar } from "@/components/visa-form/itinerary-toolbar";
+import { TripBasicsSection } from "@/components/visa-form/trip-basics-section";
 import {
   cityAirportMap,
   countryCityMap,
@@ -147,6 +150,17 @@ export function VisaAssistant() {
 
   const addDay = () => setDays(prev => [...prev, emptyDay()]);
 
+  const handleProvinceChange = (nextProvince: string) => {
+    const firstCity = Object.keys(cnGeo[nextProvince])[0];
+    setProvince(nextProvince);
+    setCity(firstCity);
+  };
+
+  const handleTripRangeChange = ({ start, end }: { start: string; end: string }) => {
+    setTripStartDate(start);
+    setTripEndDate(end);
+  };
+
   const autoBuildDays = () => {
     const arr = calcDates(tripStartDate, tripEndDate);
     if (!arr.length) return;
@@ -241,26 +255,26 @@ export function VisaAssistant() {
       {tab === "itinerary" && (
         <BlurFade delayMs={120}>
           <MagicCard className="mb-5">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-slate-900">签证行程单生成</h2>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">优先级最高</span>
+              <ItineraryToolbar onAddDay={addDay} onGenerate={generateItinerary} />
             </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <input className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" placeholder="申请人姓名" value={applicantName} onChange={e => setApplicantName(e.target.value)} />
-              <input className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" placeholder="护照号" value={passportNo} onChange={e => setPassportNo(e.target.value)} />
-              <div className="grid grid-cols-2 gap-2">
-                <select className="rounded-xl border border-slate-200 bg-white px-2 py-2.5" value={province} onChange={e => { const p = e.target.value; const firstCity = Object.keys(cnGeo[p])[0]; setProvince(p); setCity(firstCity); }}>{provinces.map(p => <option key={p}>{p}</option>)}</select>
-                <select className="rounded-xl border border-slate-200 bg-white px-2 py-2.5" value={city} onChange={e => setCity(e.target.value)}>{cities.map(c => <option key={c}>{c}</option>)}</select>
-              </div>
-            </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <input type="date" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" value={tripStartDate} onChange={e => setTripStartDate(e.target.value)} />
-              <input type="date" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" value={tripEndDate} onChange={e => setTripEndDate(e.target.value)} />
-              <ShimmerButton onClick={autoBuildDays}>生成行程清单</ShimmerButton>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button onClick={addDay} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 font-medium text-white">新增一天行程</button>
-            </div>
+            <TripBasicsSection
+              applicantName={applicantName}
+              onApplicantNameChange={setApplicantName}
+              passportNo={passportNo}
+              onPassportNoChange={setPassportNo}
+              province={province}
+              onProvinceChange={handleProvinceChange}
+              city={city}
+              onCityChange={setCity}
+              provinces={provinces}
+              cities={cities}
+              tripStartDate={tripStartDate}
+              tripEndDate={tripEndDate}
+              onTripRangeChange={handleTripRangeChange}
+              onAutoBuildDays={autoBuildDays}
+            />
 
             <div className="mt-4 space-y-3">
               {days.map((d, i) => {
@@ -464,19 +478,9 @@ export function VisaAssistant() {
                 );
               })}
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button onClick={generateItinerary} className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-medium text-slate-700">生成中英文行程单</button>
-            </div>
-
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <div className="mb-2 text-sm font-semibold">中文版（可编辑）</div>
-                <div className="min-h-40 overflow-auto rounded-lg border border-slate-100 bg-slate-50 p-3" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: zhItinerary }} />
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <div className="mb-2 text-sm font-semibold">英文版（可编辑）</div>
-                <div className="min-h-40 overflow-auto rounded-lg border border-slate-100 bg-slate-50 p-3" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: enItinerary }} />
-              </div>
+              <GeneratedPreview title="中文版（可编辑）" html={zhItinerary} />
+              <GeneratedPreview title="英文版（可编辑）" html={enItinerary} />
             </div>
           </MagicCard>
         </BlurFade>
