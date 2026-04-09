@@ -6,29 +6,37 @@ import { BlurFade } from "@/components/magicui/blur-fade";
 import { MagicCard } from "@/components/magicui/magic-card";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import {
+  cityAirportMap,
   countryCityMap,
   crossCityTime,
-  italianRegions,
   scenicMap,
   schengenCountries,
   zhEnCity
 } from "@/data/schengen-data";
 
 type TabKey = "itinerary" | "letter" | "checklist";
+type CityRow = {
+  city: string;
+  scenics: string[];
+  scenicDraft: string;
+};
+type CountryRow = {
+  country: string;
+  cityRows: CityRow[];
+  cityDraft: string;
+  scenicCityDraft: string;
+  scenicDraft: string;
+};
 type DayItem = {
   date: string;
-  countries: string[];
-  cities: string[];
-  depart: string;
-  arrive: string;
+  countryRows: CountryRow[];
   transports: string[];
-  scenicChecked: string[];
-  scenicCustom: string;
   hotelName: string;
   hotelAddress: string;
   hotelContact: string;
   flightNo: string;
-  flightTime: string;
+  departureAirport: string;
+  arrivalAirport: string;
 };
 
 const weekCN = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -67,18 +75,14 @@ const cnGeo: Record<string, Record<string, string[]>> = {
 function emptyDay(): DayItem {
   return {
     date: "",
-    countries: [],
-    cities: [],
-    depart: "",
-    arrive: "",
+    countryRows: [{ country: "", cityRows: [], cityDraft: "", scenicCityDraft: "", scenicDraft: "" }],
     transports: [],
-    scenicChecked: [],
-    scenicCustom: "",
     hotelName: "",
     hotelAddress: "",
     hotelContact: "",
     flightNo: "",
-    flightTime: ""
+    departureAirport: "",
+    arrivalAirport: ""
   };
 }
 
@@ -111,6 +115,10 @@ function calcDates(start: string, end: string) {
   return out;
 }
 
+function getFallbackScenicOptions() {
+  return Array.from({ length: 15 }).map((_, idx) => [`地标景点${idx + 1}`, `Landmark ${idx + 1}`, `${1 + idx * 0.4}公里`, `约${10 + idx}欧元/人`] as [string, string, string, string]);
+}
+
 export function VisaAssistant() {
   const [tab, setTab] = useState<TabKey>("itinerary");
   const [tripStartDate, setTripStartDate] = useState("");
@@ -119,7 +127,6 @@ export function VisaAssistant() {
   const [passportNo, setPassportNo] = useState("");
   const [province, setProvince] = useState(Object.keys(cnGeo)[0]);
   const [city, setCity] = useState(Object.keys(cnGeo[Object.keys(cnGeo)[0]])[0]);
-  const [county, setCounty] = useState(cnGeo[Object.keys(cnGeo)[0]][Object.keys(cnGeo[Object.keys(cnGeo)[0]])[0]][0]);
   const [days, setDays] = useState<DayItem[]>([emptyDay()]);
   const [zhItinerary, setZhItinerary] = useState("");
   const [enItinerary, setEnItinerary] = useState("");
@@ -133,7 +140,6 @@ export function VisaAssistant() {
 
   const provinces = Object.keys(cnGeo);
   const cities = useMemo(() => Object.keys(cnGeo[province] || {}), [province]);
-  const counties = useMemo(() => cnGeo[province]?.[city] || [], [province, city]);
 
   const updateDay = (index: number, patch: Partial<DayItem>) => {
     setDays(prev => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
@@ -151,28 +157,43 @@ export function VisaAssistant() {
     const zhRows: string[] = [];
     const enRows: string[] = [];
     days.forEach((d, idx) => {
-      const needRoute = d.countries.length > 1 || d.cities.length > 1;
-      const depart = needRoute ? d.depart : d.cities[0] || "-";
-      const arrive = needRoute ? d.arrive : d.cities[0] || "-";
-      if (needRoute && (!d.depart || !d.arrive)) return;
-      const scenicCustom = d.scenicCustom.split(/[，,、]/).map(s => s.trim()).filter(Boolean);
-      const scenicAll = [...new Set([...d.scenicChecked, ...scenicCustom])];
-      const scenicCN = scenicAll.join("；") || "-";
-      const scenicEN = scenicAll.map(s => {
-        const hit = Object.values(scenicMap).flat().find(v => v[0] === s);
-        return hit?.[1] || s;
+      const cityRoutePoints = d.countryRows.flatMap(row => row.cityRows.map(cityRow => cityRow.city)).filter(Boolean);
+      const countryRoutePoints = d.countryRows.map(row => row.country).filter(Boolean);
+      const routePoints = cityRoutePoints.length ? cityRoutePoints : countryRoutePoints;
+      const depart = routePoints[0] || "-";
+      const arrive = routePoints[routePoints.length - 1] || depart;
+      const via = routePoints.slice(1, -1);
+      const scenicRows = d.countryRows.flatMap(row => row.cityRows.filter(cityRow => cityRow.scenics.length).map(cityRow => ({ city: cityRow.city, scenics: cityRow.scenics })));
+      const scenicCN = scenicRows.map(row => `${row.city}：${row.scenics.join("、")}`).join("；") || "-";
+      const scenicEN = scenicRows.map(row => {
+        const scenicNames = row.scenics.map(scenic => {
+          const hit = Object.values(scenicMap).flat().find(v => v[0] === scenic);
+          return hit?.[1] || scenic;
+        });
+        return `${cityToEn(row.city)}: ${scenicNames.join(", ")}`;
       }).join("; ") || "-";
       const hotelCN = `酒店：${d.hotelName || "-"}；地址：${d.hotelAddress || "-"}；联系方式：${d.hotelContact || "-"}`;
       const hotelEN = `Hotel: ${d.hotelName || "-"}; Address: ${d.hotelAddress || "-"}; Contact: ${d.hotelContact || "-"}`;
-      const transCN = d.transports.join(" + ") || "-";
-      const transEN = d.transports.map(t => ({ 飞机: "Flight", 火车: "Train", 汽车: "Car", 地铁: "Metro", 步行: "Walking", 公交: "Bus", 轮渡: "Ferry", 出租车: "Taxi" }[t] || t)).join(" + ") || "-";
+      const translatedTransports = d.transports.map(t => ({ 飞机: "Flight", 火车: "Train", 汽车: "Car", 地铁: "Metro", 步行: "Walking", 公交: "Bus", 轮渡: "Ferry", 出租车: "Taxi" }[t] || t));
+      const transCNBase = d.transports.join(" + ");
+      const transENBase = translatedTransports.join(" + ");
+      const flightCN = d.transports.includes("飞机")
+        ? `（起飞：${d.departureAirport || "-"}；落地：${d.arrivalAirport || "-"}；航班号：${d.flightNo || "-"}）`
+        : "";
+      const flightEN = d.transports.includes("飞机")
+        ? ` (Dep: ${d.departureAirport || "-"}; Arr: ${d.arrivalAirport || "-"}; Flight No.: ${d.flightNo || "-"})`
+        : "";
+      const transCN = (transCNBase ? `${transCNBase}${flightCN}` : "-");
+      const transEN = (transENBase ? `${transENBase}${flightEN}` : "-");
       const key = `${depart}-${arrive}`;
       const rev = `${arrive}-${depart}`;
       const tip = crossCityTime[key] || crossCityTime[rev];
-      zhRows.push(`<tr><td>${idx + 1}</td><td>${formatDateCN(d.date)}</td><td>${depart} → ${arrive}</td><td>${scenicCN}</td><td>${hotelCN}</td><td>${transCN}${tip ? `（${tip}）` : ""}</td></tr>`);
-      enRows.push(`<tr><td>${idx + 1}</td><td>${formatDateEN(d.date)}</td><td>${cityToEn(depart)} to ${cityToEn(arrive)}</td><td>${scenicEN}</td><td>${hotelEN}</td><td>${transEN}</td></tr>`);
+      const routeCN = via.length ? `${depart} → ${via.join(" → ")} → ${arrive}` : depart === arrive ? depart : `${depart} → ${arrive}`;
+      const routeEN = via.length ? `${cityToEn(depart)} → ${via.map(cityToEn).join(" → ")} → ${cityToEn(arrive)}` : depart === arrive ? cityToEn(depart) : `${cityToEn(depart)} to ${cityToEn(arrive)}`;
+      zhRows.push(`<tr><td>${idx + 1}</td><td>${formatDateCN(d.date)}</td><td>${routeCN}</td><td>${scenicCN}</td><td>${hotelCN}</td><td>${transCN}${tip ? `（${tip}）` : ""}</td></tr>`);
+      enRows.push(`<tr><td>${idx + 1}</td><td>${formatDateEN(d.date)}</td><td>${routeEN}</td><td>${scenicEN}</td><td>${hotelEN}</td><td>${transEN}</td></tr>`);
     });
-    setZhItinerary(`<div><strong>意大利申根签证行程单（中文版）</strong></div><div>申请人：${applicantName || "未填写"} ｜ 护照号：${passportNo || "未填写"} ｜ 出发地：${province}${city}${county}</div><table><thead><tr><th>天数</th><th>日期（星期）</th><th>城市</th><th>景点</th><th>住宿</th><th>交通方式</th></tr></thead><tbody>${zhRows.join("")}</tbody></table>`);
+    setZhItinerary(`<div><strong>意大利申根签证行程单（中文版）</strong></div><div>申请人：${applicantName || "未填写"} ｜ 护照号：${passportNo || "未填写"} ｜ 出发地：${province}${city}</div><table><thead><tr><th>天数</th><th>日期（星期）</th><th>城市</th><th>景点</th><th>住宿</th><th>交通方式</th></tr></thead><tbody>${zhRows.join("")}</tbody></table>`);
     setEnItinerary(`<div><strong>ITALY SCHENGEN VISA ITINERARY (ENGLISH)</strong></div><div>Applicant: ${applicantName || "N/A"} | Passport No.: ${passportNo || "N/A"} | Departure: ${cityToEn(city)}, China</div><table><thead><tr><th>Day</th><th>Date (Weekday)</th><th>City</th><th>Attractions</th><th>Accommodation</th><th>Transportation</th></tr></thead><tbody>${enRows.join("")}</tbody></table>`);
   };
 
@@ -227,69 +248,224 @@ export function VisaAssistant() {
             <div className="grid gap-3 md:grid-cols-3">
               <input className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" placeholder="申请人姓名" value={applicantName} onChange={e => setApplicantName(e.target.value)} />
               <input className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" placeholder="护照号" value={passportNo} onChange={e => setPassportNo(e.target.value)} />
-              <div className="grid grid-cols-3 gap-2">
-                <select className="rounded-xl border border-slate-200 bg-white px-2 py-2.5" value={province} onChange={e => { const p = e.target.value; const firstCity = Object.keys(cnGeo[p])[0]; setProvince(p); setCity(firstCity); setCounty(cnGeo[p][firstCity][0]); }}>{provinces.map(p => <option key={p}>{p}</option>)}</select>
-                <select className="rounded-xl border border-slate-200 bg-white px-2 py-2.5" value={city} onChange={e => { const c = e.target.value; setCity(c); setCounty((cnGeo[province][c] || [])[0] || ""); }}>{cities.map(c => <option key={c}>{c}</option>)}</select>
-                <select className="rounded-xl border border-slate-200 bg-white px-2 py-2.5" value={county} onChange={e => setCounty(e.target.value)}>{counties.map(c => <option key={c}>{c}</option>)}</select>
+              <div className="grid grid-cols-2 gap-2">
+                <select className="rounded-xl border border-slate-200 bg-white px-2 py-2.5" value={province} onChange={e => { const p = e.target.value; const firstCity = Object.keys(cnGeo[p])[0]; setProvince(p); setCity(firstCity); }}>{provinces.map(p => <option key={p}>{p}</option>)}</select>
+                <select className="rounded-xl border border-slate-200 bg-white px-2 py-2.5" value={city} onChange={e => setCity(e.target.value)}>{cities.map(c => <option key={c}>{c}</option>)}</select>
               </div>
             </div>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               <input type="date" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" value={tripStartDate} onChange={e => setTripStartDate(e.target.value)} />
               <input type="date" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5" value={tripEndDate} onChange={e => setTripEndDate(e.target.value)} />
-              <ShimmerButton onClick={autoBuildDays}>按往返日期自动生成行程天数</ShimmerButton>
+              <ShimmerButton onClick={autoBuildDays}>生成行程清单</ShimmerButton>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <button onClick={addDay} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 font-medium text-white">新增一天行程</button>
-              <button onClick={generateItinerary} className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-medium text-slate-700">生成中英文行程单</button>
             </div>
 
             <div className="mt-4 space-y-3">
               {days.map((d, i) => {
                 const countryOptions = ["中国", ...schengenCountries];
-                const selectedCountry = d.countries.length ? d.countries : ["意大利"];
-                const cityOptions = Array.from(new Set(selectedCountry.flatMap(c => countryCityMap[c] || [])));
-                const scenicOptions = scenicMap[d.cities[0]] || Array.from({ length: 15 }).map((_, idx) => [`地标景点${idx + 1}`, `Landmark ${idx + 1}`, `${1 + idx * 0.4}公里`, `约${10 + idx}欧元/人`] as [string, string, string, string]);
-                const needRoute = d.countries.length > 1 || d.cities.length > 1;
-                const previewFrom = needRoute ? d.depart : (d.cities[0] || "");
-                const previewTo = needRoute ? d.arrive : (d.cities[0] || "");
+                const cityPreviewPoints = d.countryRows.flatMap(row => row.cityRows.map(cityRow => cityRow.city)).filter(Boolean);
+                const countryPreviewPoints = d.countryRows.map(row => row.country).filter(Boolean);
+                const previewPoints = cityPreviewPoints.length ? cityPreviewPoints : countryPreviewPoints;
+                const previewFrom = previewPoints[0] || "";
+                const previewTo = previewPoints[previewPoints.length - 1] || "";
+                const previewVia = previewPoints.slice(1, -1);
                 const timeHint = previewFrom && previewTo ? (crossCityTime[`${previewFrom}-${previewTo}`] || crossCityTime[`${previewTo}-${previewFrom}`]) : "";
+                const selectedCities = new Set(d.countryRows.flatMap(row => row.cityRows.map(cityRow => cityRow.city)));
+                const selectedScenics = new Set(d.countryRows.flatMap(row => row.cityRows.flatMap(cityRow => cityRow.scenics)));
+                const airportOptions = Array.from(new Set(cityPreviewPoints.flatMap(cityName => cityAirportMap[cityName] || [])));
+                const airportCandidates = airportOptions.length ? airportOptions : ["其他机场"];
                 return (
                   <div key={i} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="font-semibold text-slate-800">第 {i + 1} 天</div>
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">建议景点 3-4 个</span>
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-4">
+                    <div className="mb-2 grid gap-3 md:grid-cols-[160px_minmax(0,1fr)]">
+                      <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-800">第 {i + 1} 天</div>
                       <input type="date" className="rounded-lg border border-slate-200 px-2 py-2" value={d.date} onChange={e => updateDay(i, { date: e.target.value })} />
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">{countryOptions.map(c => <label key={c} className="mr-2 inline-flex items-center gap-1 text-xs"><input type="checkbox" checked={d.countries.includes(c)} onChange={e => updateDay(i, { countries: e.target.checked ? [...d.countries, c] : d.countries.filter(x => x !== c), cities: [] })} />{c}</label>)}</div>
-                      <select className="rounded-lg border border-slate-200 px-2 py-2" onChange={e => { const rg = e.target.value; if (rg) updateDay(i, { cities: italianRegions[rg] || [] }); }}>
-                        <option value="">意大利大区（可选）</option>
-                        {Object.keys(italianRegions).map(r => <option key={r}>{r}</option>)}
-                      </select>
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">{cityOptions.map(c => <label key={c} className="mr-2 inline-flex items-center gap-1 text-xs"><input type="checkbox" checked={d.cities.includes(c)} onChange={e => updateDay(i, { cities: e.target.checked ? [...d.cities, c] : d.cities.filter(x => x !== c) })} />{c}</label>)}</div>
                     </div>
-                    {needRoute && (
-                      <div className="mt-2 grid gap-2 md:grid-cols-2">
-                        <input className="rounded-lg border border-slate-200 px-2 py-2" placeholder="出发地（城市）" value={d.depart} onChange={e => updateDay(i, { depart: e.target.value })} />
-                        <input className="rounded-lg border border-slate-200 px-2 py-2" placeholder="到达地（城市）" value={d.arrive} onChange={e => updateDay(i, { arrive: e.target.value })} />
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                      <div className="space-y-2">
+                        {d.countryRows.map((countryRow, countryIndex) => {
+                          const cityOptions = countryCityMap[countryRow.country] || [];
+                          const scenicCityOptions = countryRow.cityRows.map(cityRow => cityRow.city);
+                          const scenicOptions = scenicMap[countryRow.scenicCityDraft] || getFallbackScenicOptions();
+                          return (
+                            <div key={`${countryIndex}-${countryRow.country}`} className="rounded-lg border border-slate-200 bg-white p-2">
+                              <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)_minmax(0,1.2fr)]">
+                                <div className="flex items-center gap-2">
+                                  <select
+                                    className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"
+                                    value={countryRow.country}
+                                    onChange={e => {
+                                      const selectedCountry = e.target.value;
+                                      const nextCountryRows = d.countryRows.map((item, idx) => idx === countryIndex ? { country: selectedCountry, cityRows: [], cityDraft: "", scenicCityDraft: "", scenicDraft: "" } : item);
+                                      if (selectedCountry && countryIndex === nextCountryRows.length - 1) {
+                                        nextCountryRows.push({ country: "", cityRows: [], cityDraft: "", scenicCityDraft: "", scenicDraft: "" });
+                                      }
+                                      updateDay(i, { countryRows: nextCountryRows });
+                                    }}
+                                  >
+                                    <option value="">选择国家</option>
+                                    {countryOptions.map(country => <option key={country} value={country}>{country}</option>)}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    onClick={() => {
+                                      const filledCount = d.countryRows.filter(row => row.country || row.cityRows.length).length;
+                                      if (filledCount <= 1 && countryRow.country) return;
+                                      const nextCountryRows = d.countryRows.filter((_, idx) => idx !== countryIndex);
+                                      updateDay(i, { countryRows: nextCountryRows.length ? nextCountryRows : [{ country: "", cityRows: [], cityDraft: "", scenicCityDraft: "", scenicDraft: "" }] });
+                                    }}
+                                    disabled={d.countryRows.filter(row => row.country || row.cityRows.length).length <= 1 && !!countryRow.country}
+                                  >
+                                    删除
+                                  </button>
+                                </div>
+                                <select
+                                  className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"
+                                  value={countryRow.cityDraft}
+                                  onChange={e => {
+                                    const selectedCity = e.target.value;
+                                    if (!selectedCity || selectedCities.has(selectedCity)) return;
+                                    const nextCountryRows = d.countryRows.map((item, idx) => {
+                                      if (idx !== countryIndex) return item;
+                                      return {
+                                        ...item,
+                                        cityRows: [...item.cityRows, { city: selectedCity, scenics: [], scenicDraft: "" }],
+                                        cityDraft: ""
+                                      };
+                                    });
+                                    updateDay(i, { countryRows: nextCountryRows });
+                                  }}
+                                  disabled={!countryRow.country}
+                                >
+                                  <option value="">选择城市（多选，自动逐行回显）</option>
+                                  {cityOptions.map(cityName => <option key={cityName} value={cityName} disabled={selectedCities.has(cityName)}>{cityName}</option>)}
+                                </select>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <select
+                                    className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"
+                                    value={countryRow.scenicCityDraft}
+                                    onChange={e => {
+                                      const selectedCity = e.target.value;
+                                      const nextCountryRows = d.countryRows.map((item, idx) => idx === countryIndex ? { ...item, scenicCityDraft: selectedCity, scenicDraft: "" } : item);
+                                      updateDay(i, { countryRows: nextCountryRows });
+                                    }}
+                                    disabled={!countryRow.cityRows.length}
+                                  >
+                                    <option value="">级联第一步：选择城市</option>
+                                    {scenicCityOptions.map(cityName => <option key={cityName} value={cityName}>{cityName}</option>)}
+                                  </select>
+                                  <select
+                                    className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"
+                                    value={countryRow.scenicDraft}
+                                    onChange={e => {
+                                      const selectedScenic = e.target.value;
+                                      if (!selectedScenic || !countryRow.scenicCityDraft || selectedScenics.has(selectedScenic)) return;
+                                      const nextCountryRows = d.countryRows.map((item, idx) => {
+                                        if (idx !== countryIndex) return item;
+                                        return {
+                                          ...item,
+                                          cityRows: item.cityRows.map(cityItem => cityItem.city === item.scenicCityDraft ? { ...cityItem, scenics: [...cityItem.scenics, selectedScenic] } : cityItem),
+                                          scenicDraft: ""
+                                        };
+                                      });
+                                      updateDay(i, { countryRows: nextCountryRows });
+                                    }}
+                                    disabled={!countryRow.scenicCityDraft}
+                                  >
+                                    <option value="">级联第二步：选择景点</option>
+                                    {scenicOptions.map(option => <option key={option[0]} value={option[0]} disabled={selectedScenics.has(option[0])}>{option[0]}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                              <div className="mt-2 space-y-2">
+                                {countryRow.cityRows.map((cityRow, cityIndex) => (
+                                  <div key={`${cityIndex}-${cityRow.city}`} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="text-xs font-medium text-slate-700">{cityRow.city}</div>
+                                      <button
+                                        type="button"
+                                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-600"
+                                        onClick={() => {
+                                          const nextCountryRows = d.countryRows.map((item, idx) => {
+                                            if (idx !== countryIndex) return item;
+                                            const nextCityRows = item.cityRows.filter((_, cityIdx) => cityIdx !== cityIndex);
+                                            const resetScenicCityDraft = item.scenicCityDraft === cityRow.city ? "" : item.scenicCityDraft;
+                                            return { ...item, cityRows: nextCityRows, scenicCityDraft: resetScenicCityDraft, scenicDraft: resetScenicCityDraft ? item.scenicDraft : "" };
+                                          });
+                                          updateDay(i, { countryRows: nextCountryRows });
+                                        }}
+                                      >
+                                        删除城市
+                                      </button>
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      {cityRow.scenics.map((scenic, scenicIndex) => (
+                                        <span key={`${scenicIndex}-${scenic}`} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs">
+                                          <span>{scenic}</span>
+                                          <button
+                                            type="button"
+                                            className="text-slate-500"
+                                            onClick={() => {
+                                              const nextCountryRows = d.countryRows.map((item, idx) => {
+                                                if (idx !== countryIndex) return item;
+                                                return {
+                                                  ...item,
+                                                  cityRows: item.cityRows.map((cityItem, cityIdx) => cityIdx === cityIndex ? { ...cityItem, scenics: cityItem.scenics.filter((_, sIdx) => sIdx !== scenicIndex) } : cityItem)
+                                                };
+                                              });
+                                              updateDay(i, { countryRows: nextCountryRows });
+                                            }}
+                                          >
+                                            ×
+                                          </button>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">{transportOptions.map(t => <label key={t} className="mr-2 inline-flex items-center gap-1 text-xs"><input type="checkbox" checked={d.transports.includes(t)} onChange={e => updateDay(i, { transports: e.target.checked ? [...d.transports, t] : d.transports.filter(x => x !== t) })} />{t}</label>)}</div>
-                    {(timeHint || d.transports.includes("飞机")) && (
-                      <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-xs text-blue-700">
-                        {timeHint ? `跨城通行时间：${timeHint}（仅供参考）` : ""} {d.transports.includes("飞机") ? "已选择飞机，请补充航班号并注意中意时差约6-7小时。" : ""}
-                      </div>
-                    )}
+                      {previewPoints.length > 1 && (
+                        <div className="mt-2 text-xs text-slate-600">
+                          出发地：{previewFrom} ｜ 途经地：{previewVia.length ? previewVia.join("、") : "无"} ｜ 目的地：{previewTo}
+                        </div>
+                      )}
+                    </div>
                     <div className="mt-2 grid gap-2 md:grid-cols-2">
                       <input className="rounded-lg border border-slate-200 px-2 py-2" placeholder="酒店名称" value={d.hotelName} onChange={e => updateDay(i, { hotelName: e.target.value })} />
                       <input className="rounded-lg border border-slate-200 px-2 py-2" placeholder="酒店联系方式" value={d.hotelContact} onChange={e => updateDay(i, { hotelContact: e.target.value })} />
                     </div>
                     <input className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-2" placeholder="酒店地址" value={d.hotelAddress} onChange={e => updateDay(i, { hotelAddress: e.target.value })} />
-                    <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2">{scenicOptions.map(s => <label key={s[0]} className="mb-1 block text-xs"><input type="checkbox" checked={d.scenicChecked.includes(s[0])} onChange={e => updateDay(i, { scenicChecked: e.target.checked ? [...d.scenicChecked, s[0]] : d.scenicChecked.filter(x => x !== s[0]) })} /> {s[0]} / {s[1]}，距离市中心{s[2]}，门票{s[3]}（仅供参考）</label>)}</div>
-                    <textarea className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm" placeholder="手动输入景点（多个请用逗号分隔）" value={d.scenicCustom} onChange={e => updateDay(i, { scenicCustom: e.target.value })} />
+                    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">{transportOptions.map(t => <label key={t} className="mr-2 inline-flex items-center gap-1 text-xs"><input type="checkbox" checked={d.transports.includes(t)} onChange={e => updateDay(i, { transports: e.target.checked ? [...d.transports, t] : d.transports.filter(x => x !== t) })} />{t}</label>)}</div>
+                    {d.transports.includes("飞机") && (
+                      <div className="mt-2 grid gap-2 md:grid-cols-3">
+                        <select className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm" value={d.departureAirport} onChange={e => updateDay(i, { departureAirport: e.target.value })}>
+                          <option value="">选择起飞机场</option>
+                          {airportCandidates.map(airport => <option key={`dep-${airport}`} value={airport}>{airport}</option>)}
+                        </select>
+                        <select className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm" value={d.arrivalAirport} onChange={e => updateDay(i, { arrivalAirport: e.target.value })}>
+                          <option value="">选择落地机场</option>
+                          {airportCandidates.map(airport => <option key={`arr-${airport}`} value={airport}>{airport}</option>)}
+                        </select>
+                        <input className="rounded-lg border border-slate-200 px-2 py-2" placeholder="填写航班号" value={d.flightNo} onChange={e => updateDay(i, { flightNo: e.target.value })} />
+                      </div>
+                    )}
+                    {(timeHint || d.transports.includes("飞机")) && (
+                      <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-xs text-blue-700">
+                        {timeHint ? `跨城通行时间：${timeHint}（仅供参考）` : ""} {d.transports.includes("飞机") ? "已选择飞机，请补充起降机场与航班号，并注意中意时差约6-7小时。" : ""}
+                      </div>
+                    )}
                   </div>
                 );
               })}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={generateItinerary} className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-medium text-slate-700">生成中英文行程单</button>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
