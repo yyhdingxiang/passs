@@ -92,47 +92,71 @@ export const scenicMap: Record<string, ScenicItem[]> = {
   ]
 };
 
-export const cityAirportMap: Record<string, string[]> = {
-  北京: ["北京首都国际机场（PEK）", "北京大兴国际机场（PKX）"],
-  上海: ["上海浦东国际机场（PVG）", "上海虹桥国际机场（SHA）"],
-  广州: ["广州白云国际机场（CAN）"],
-  深圳: ["深圳宝安国际机场（SZX）"],
-  成都: ["成都天府国际机场（TFU）", "成都双流国际机场（CTU）"],
-  杭州: ["杭州萧山国际机场（HGH）"],
-  重庆: ["重庆江北国际机场（CKG）"],
-  南京: ["南京禄口国际机场（NKG）"],
-  武汉: ["武汉天河国际机场（WUH）"],
-  西安: ["西安咸阳国际机场（XIY）"],
-  苏州: ["上海虹桥国际机场（SHA）"],
-  天津: ["天津滨海国际机场（TSN）"],
-  罗马: ["罗马菲乌米奇诺机场（FCO）", "罗马钱皮诺机场（CIA）"],
-  米兰: ["米兰马尔彭萨机场（MXP）", "米兰利纳特机场（LIN）"],
-  佛罗伦萨: ["佛罗伦萨机场（FLR）", "比萨国际机场（PSA）"],
-  威尼斯: ["威尼斯马可波罗机场（VCE）", "特雷维索机场（TSF）"],
-  那不勒斯: ["那不勒斯国际机场（NAP）"],
-  都灵: ["都灵机场（TRN）"],
-  博洛尼亚: ["博洛尼亚机场（BLQ）"],
-  比萨: ["比萨国际机场（PSA）"],
-  维罗纳: ["维罗纳机场（VRN）"],
-  锡耶纳: ["佛罗伦萨机场（FLR）"],
-  热那亚: ["热那亚机场（GOA）"],
-  巴里: ["巴里机场（BRI）"],
-  奥尔蒂塞伊: ["博尔扎诺机场（BZO）"],
-  巴黎: ["巴黎戴高乐机场（CDG）", "巴黎奥利机场（ORY）"],
-  里昂: ["里昂圣埃克絮佩里机场（LYS）"],
-  柏林: ["柏林勃兰登堡机场（BER）"],
-  慕尼黑: ["慕尼黑机场（MUC）"],
-  马德里: ["马德里巴拉哈斯机场（MAD）"],
-  巴塞罗那: ["巴塞罗那机场（BCN）"],
-  阿姆斯特丹: ["阿姆斯特丹史基浦机场（AMS）"],
-  鹿特丹: ["鹿特丹海牙机场（RTM）"],
-  维也纳: ["维也纳国际机场（VIE）"],
-  萨尔茨堡: ["萨尔茨堡机场（SZG）"],
-  布拉格: ["布拉格机场（PRG）"],
-  里斯本: ["里斯本机场（LIS）"],
-  华沙: ["华沙肖邦机场（WAW）"],
-  雅典: ["雅典国际机场（ATH）"]
+export type CityAirportRegistryItem = {
+  key: string;
+  label: string;
+  aliases?: string[];
+  airports: string[];
 };
+
+export const cityAirportRegistry: CityAirportRegistryItem[] = [
+  { key: "北京", label: "北京", aliases: ["北京市"], airports: ["北京首都国际机场（PEK）", "北京大兴国际机场（PKX）"] },
+  { key: "上海", label: "上海", aliases: ["上海市"], airports: ["上海浦东国际机场（PVG）", "上海虹桥国际机场（SHA）"] },
+  { key: "广州", label: "广州", aliases: ["广州市"], airports: ["广州白云国际机场（CAN）"] },
+  { key: "深圳", label: "深圳", aliases: ["深圳市"], airports: ["深圳宝安国际机场（SZX）"] },
+  { key: "成都", label: "成都", aliases: ["成都市"], airports: ["成都天府国际机场（TFU）", "成都双流国际机场（CTU）"] },
+  { key: "杭州", label: "杭州", aliases: ["杭州市"], airports: ["杭州萧山国际机场（HGH）"] },
+  { key: "重庆", label: "重庆", aliases: ["重庆市"], airports: ["重庆江北国际机场（CKG）"] },
+  { key: "南京", label: "南京", aliases: ["南京市"], airports: ["南京禄口国际机场（NKG）"] },
+  { key: "武汉", label: "武汉", aliases: ["武汉市"], airports: ["武汉天河国际机场（WUH）"] },
+  { key: "西安", label: "西安", aliases: ["西安市"], airports: ["西安咸阳国际机场（XIY）"] },
+  { key: "苏州", label: "苏州", aliases: ["苏州市"], airports: ["上海虹桥国际机场（SHA）"] },
+  { key: "天津", label: "天津", aliases: ["天津市"], airports: ["天津滨海国际机场（TSN）"] },
+  { key: "罗马", label: "罗马", airports: ["罗马菲乌米奇诺机场（FCO）", "罗马钱皮诺机场（CIA）"] },
+  { key: "米兰", label: "米兰", airports: ["米兰马尔彭萨机场（MXP）", "米兰利纳特机场（LIN）"] },
+  { key: "佛罗伦萨", label: "佛罗伦萨", airports: ["佛罗伦萨机场（FLR）", "比萨国际机场（PSA）"] },
+  { key: "威尼斯", label: "威尼斯", airports: ["威尼斯马可波罗机场（VCE）", "特雷维索机场（TSF）"] },
+  { key: "那不勒斯", label: "那不勒斯", airports: ["那不勒斯国际机场（NAP）"] },
+  { key: "都灵", label: "都灵", airports: ["都灵机场（TRN）"] },
+  { key: "博洛尼亚", label: "博洛尼亚", airports: ["博洛尼亚机场（BLQ）"] },
+  { key: "比萨", label: "比萨", airports: ["比萨国际机场（PSA）"] },
+  { key: "维罗纳", label: "维罗纳", airports: ["维罗纳机场（VRN）"] },
+  { key: "锡耶纳", label: "锡耶纳", airports: ["佛罗伦萨机场（FLR）"] },
+  { key: "热那亚", label: "热那亚", airports: ["热那亚机场（GOA）"] },
+  { key: "巴里", label: "巴里", airports: ["巴里机场（BRI）"] },
+  { key: "奥尔蒂塞伊", label: "奥尔蒂塞伊", airports: ["博尔扎诺机场（BZO）"] },
+  { key: "巴黎", label: "巴黎", airports: ["巴黎戴高乐机场（CDG）", "巴黎奥利机场（ORY）"] },
+  { key: "里昂", label: "里昂", airports: ["里昂圣埃克絮佩里机场（LYS）"] },
+  { key: "柏林", label: "柏林", airports: ["柏林勃兰登堡机场（BER）"] },
+  { key: "慕尼黑", label: "慕尼黑", airports: ["慕尼黑机场（MUC）"] },
+  { key: "马德里", label: "马德里", airports: ["马德里巴拉哈斯机场（MAD）"] },
+  { key: "巴塞罗那", label: "巴塞罗那", airports: ["巴塞罗那机场（BCN）"] },
+  { key: "阿姆斯特丹", label: "阿姆斯特丹", airports: ["阿姆斯特丹史基浦机场（AMS）"] },
+  { key: "鹿特丹", label: "鹿特丹", airports: ["鹿特丹海牙机场（RTM）"] },
+  { key: "维也纳", label: "维也纳", airports: ["维也纳国际机场（VIE）"] },
+  { key: "萨尔茨堡", label: "萨尔茨堡", airports: ["萨尔茨堡机场（SZG）"] },
+  { key: "布拉格", label: "布拉格", airports: ["布拉格机场（PRG）"] },
+  { key: "里斯本", label: "里斯本", airports: ["里斯本机场（LIS）"] },
+  { key: "华沙", label: "华沙", airports: ["华沙肖邦机场（WAW）"] },
+  { key: "雅典", label: "雅典", airports: ["雅典国际机场（ATH）"] }
+];
+
+export const cityAirportMap: Record<string, string[]> = Object.fromEntries(
+  cityAirportRegistry.map(({ key, airports }) => [key, airports])
+);
+
+export const cityAirportAliasMap: Record<string, string> = Object.fromEntries(
+  cityAirportRegistry.flatMap(({ key, label, aliases = [] }) => [key, label, ...aliases].map((name) => [name, key]))
+);
+
+export function resolveCityAirportKey(cityName: string) {
+  return cityAirportAliasMap[cityName] || "";
+}
+
+export function getCityAirports(cityName: string) {
+  const key = resolveCityAirportKey(cityName);
+  return key ? cityAirportMap[key] || [] : [];
+}
 
 export const zhEnCity: Record<string, string> = {
   北京: "Beijing", 上海: "Shanghai", 广州: "Guangzhou", 深圳: "Shenzhen", 成都: "Chengdu", 杭州: "Hangzhou", 重庆: "Chongqing", 南京: "Nanjing", 武汉: "Wuhan", 西安: "Xi'an", 苏州: "Suzhou", 天津: "Tianjin",

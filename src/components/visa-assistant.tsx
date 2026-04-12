@@ -8,6 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { escapeHtml } from "@/lib/html";
+import { buildItineraryDocument, type ItineraryDocument, type ItineraryDocumentRow } from "@/lib/itinerary-document";
+import { exportItineraryDocx } from "@/lib/itinerary-docx";
+import { renderItineraryHtml } from "@/lib/itinerary-html";
+import {
+  advancePdfExportState,
+  idlePdfExportStatus,
+  openItineraryPrintWindow,
+  type PdfExportStatus
+} from "@/lib/itinerary-print";
 import { cn } from "@/lib/utils";
 import { parseCascaderSelection } from "@/lib/visa-form-options";
 import { GeneratedPreview } from "@/components/visa-form/generated-preview";
@@ -15,8 +24,8 @@ import { DayCard } from "@/components/visa-form/day-card";
 import { ItineraryToolbar } from "@/components/visa-form/itinerary-toolbar";
 import { TripBasicsSection } from "@/components/visa-form/trip-basics-section";
 import {
-  cityAirportMap,
   crossCityTime,
+  getCityAirports,
   scenicMap,
   schengenCountries,
   zhEnCity
@@ -38,6 +47,11 @@ export type CountryRow = {
   scenicDraft: string;
 };
 
+type FlatCityEntry = {
+  country: string;
+  cityRow: CityRow;
+};
+
 export type DayItem = {
   date: string;
   countryRows: CountryRow[];
@@ -53,6 +67,11 @@ export type DayItem = {
 export type DayHotelPatch = Partial<Pick<DayItem, "hotelName" | "hotelAddress" | "hotelContact">>;
 export type DayFlightPatch = Partial<Pick<DayItem, "flightNo" | "departureAirport" | "arrivalAirport">>;
 
+type PdfStatusViewState = PdfExportStatus & {
+  visible: boolean;
+  targetLabel: string;
+};
+
 const weekCN = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const weekEN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const travelPurposeOptions = ["旅游", "商务", "探亲", "访友", "文化交流"];
@@ -62,6 +81,16 @@ const travelPurposeEnMap: Record<string, string> = {
   探亲: "family visit",
   访友: "visiting friends",
   文化交流: "cultural exchange"
+};
+const transportLabelEnMap: Record<string, string> = {
+  飞机: "Flight",
+  火车: "Train",
+  汽车: "Car",
+  地铁: "Metro",
+  步行: "Walking",
+  公交: "Bus",
+  轮渡: "Ferry",
+  出租车: "Taxi"
 };
 const guaranteeOptions = [
   "本人承诺按时回国，不逾期停留，严格遵守意大利及申根区相关法律法规。",
@@ -96,6 +125,7 @@ const materialList: Array<[string, "必备" | "可选", string]> = [
 ];
 const panelShellClassName = "mb-6 border border-border bg-card/95 shadow-sm";
 const nativeFieldClassName = "h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const pdfStatusResetDelayMs = 2500;
 const cnGeo: Record<string, Record<string, string[]>> = {
   四川省: { 成都市: ["锦江区", "青羊区", "武侯区"], 绵阳市: ["涪城区", "游仙区"], 乐山市: ["市中区", "沙湾区"] },
   广东省: { 广州市: ["天河区", "越秀区", "海珠区"], 深圳市: ["南山区", "福田区", "罗湖区"], 珠海市: ["香洲区", "斗门区"] },
@@ -104,10 +134,18 @@ const cnGeo: Record<string, Record<string, string[]>> = {
   上海市: { 上海市: ["浦东新区", "徐汇区", "静安区"] }
 };
 
+function emptyCityRow(): CityRow {
+  return {
+    city: "",
+    scenics: [],
+    scenicDraft: ""
+  };
+}
+
 function emptyCountryRow(): CountryRow {
   return {
     country: "",
-    cityRows: [],
+    cityRows: [emptyCityRow()],
     cityDraft: "",
     scenicCityDraft: "",
     scenicDraft: ""
@@ -132,18 +170,76 @@ function cityToEn(name: string) {
   return zhEnCity[name] || name;
 }
 
-function hasCountryRowContent(row: CountryRow) {
-  return Boolean(row.country || row.cityRows.length);
+function scenicToEn(name: string) {
+  const scenicHit = Object.values(scenicMap).flat().find(([scenicName]) => scenicName === name);
+  return scenicHit?.[1] || name;
 }
 
-function normalizeCountryRows(rows: CountryRow[]) {
-  const filledRows = rows.filter(hasCountryRowContent);
+function translateTimeHintToEn(timeHint: string) {
+  if (!timeHint) return "";
 
-  if (!filledRows.length) {
+  const matchedHighSpeedRail = timeHint.match(/^高铁平均约(.+)小时$/);
+  if (matchedHighSpeedRail) {
+    return `about ${matchedHighSpeedRail[1]} hours by high-speed train`;
+  }
+
+  const matchedTrain = timeHint.match(/^火车平均约(.+)小时$/);
+  if (matchedTrain) {
+    return `about ${matchedTrain[1]} hours by train`;
+  }
+
+  const matchedFlight = timeHint.match(/^飞机平均约(.+)小时$/);
+  if (matchedFlight) {
+    return `about ${matchedFlight[1]} hours by flight`;
+  }
+
+  return timeHint;
+}
+
+function flattenCountryRows(rows: CountryRow[]): FlatCityEntry[] {
+  return rows.flatMap(row => row.cityRows.map(cityRow => ({
+    country: row.country,
+    cityRow: {
+      ...cityRow,
+      scenics: cityRow.city ? Array.from(new Set(cityRow.scenics.filter(Boolean))) : [],
+      scenicDraft: cityRow.scenicDraft || ""
+    }
+  })));
+}
+
+// Keep the storage shape aligned with the current UI: each visible row maps to one country-city pair.
+function buildCountryRows(entries: FlatCityEntry[]) {
+  if (!entries.length) {
     return [emptyCountryRow()];
   }
 
-  return [...filledRows, emptyCountryRow()];
+  return entries.map(entry => ({
+    country: entry.cityRow.city ? entry.country : "",
+    cityRows: [{
+      ...entry.cityRow,
+      scenics: entry.cityRow.city ? Array.from(new Set(entry.cityRow.scenics.filter(Boolean))) : [],
+      scenicDraft: entry.cityRow.scenicDraft || ""
+    }],
+    cityDraft: "",
+    scenicCityDraft: "",
+    scenicDraft: ""
+  }));
+}
+
+function normalizeCountryRows(rows: CountryRow[]) {
+  return buildCountryRows(flattenCountryRows(rows));
+}
+
+function findReusableCityRowIndex(rows: CountryRow[]) {
+  return flattenCountryRows(rows).findIndex(({ cityRow }) => (
+    !cityRow.city &&
+    cityRow.scenics.length === 0 &&
+    !cityRow.scenicDraft
+  ));
+}
+
+function getFlatEntryIndex(rows: CountryRow[], countryIndex: number, cityIndex: number) {
+  return rows.slice(0, countryIndex).reduce((count, row) => count + row.cityRows.length, 0) + cityIndex;
 }
 
 function formatDateCN(v: string) {
@@ -171,10 +267,43 @@ function calcDates(start: string, end: string) {
   return out;
 }
 
-function getPreviewPoints(day: DayItem) {
+function getRouteStops(day: DayItem) {
   const cityPoints = day.countryRows.flatMap(row => row.cityRows.map(cityRow => cityRow.city)).filter(Boolean);
   const countryPoints = day.countryRows.map(row => row.country).filter(Boolean);
   return cityPoints.length ? cityPoints : countryPoints;
+}
+
+// The first non-empty row is treated as the day's primary city for cross-day transport hints.
+function getPrimaryCity(day: DayItem) {
+  return getRouteStops(day)[0] || "";
+}
+
+function getDayCities(day: DayItem) {
+  return day.countryRows.flatMap(row => row.cityRows.map(cityRow => cityRow.city)).filter(Boolean);
+}
+
+function getAllSelectedCities(days: DayItem[], departureCity: string) {
+  return Array.from(
+    new Set([
+      ...(departureCity ? [departureCity] : []),
+      ...days.flatMap(day => getDayCities(day))
+    ])
+  );
+}
+
+function getAirportsFromCities(cityNames: string[]) {
+  const airportOptions = Array.from(
+    new Set(
+      cityNames.flatMap(cityName => getCityAirports(cityName))
+    )
+  );
+
+  return airportOptions.length ? airportOptions : ["其他机场"];
+}
+
+function getTravelTimeHint(from: string, to: string) {
+  if (!from || !to || from === to) return "";
+  return crossCityTime[`${from}-${to}`] || crossCityTime[`${to}-${from}`] || "";
 }
 
 export function VisaAssistant() {
@@ -188,6 +317,8 @@ export function VisaAssistant() {
   const [days, setDays] = useState<DayItem[]>([emptyDay()]);
   const [zhItinerary, setZhItinerary] = useState("");
   const [enItinerary, setEnItinerary] = useState("");
+  const [zhItineraryDocument, setZhItineraryDocument] = useState<ItineraryDocument | null>(null);
+  const [enItineraryDocument, setEnItineraryDocument] = useState<ItineraryDocument | null>(null);
   const [letterName, setLetterName] = useState("");
   const [travelPurpose, setTravelPurpose] = useState("旅游");
   const [guarantees, setGuarantees] = useState<string[]>([]);
@@ -195,11 +326,22 @@ export function VisaAssistant() {
   const [zhLetter, setZhLetter] = useState("");
   const [enLetter, setEnLetter] = useState("");
   const [checkMap, setCheckMap] = useState<Record<number, boolean>>({});
+  const [pdfStatus, setPdfStatus] = useState<PdfStatusViewState>({
+    visible: false,
+    targetLabel: "",
+    ...idlePdfExportStatus
+  });
 
   const provinces = Object.keys(cnGeo);
   const cities = useMemo(() => Object.keys(cnGeo[province] || {}), [province]);
   const countryOptions = ["中国", ...schengenCountries];
-
+  const allSelectedCities = useMemo(() => getAllSelectedCities(days, city), [city, days]);
+  const isPdfExportBusy = pdfStatus.phase === "building"
+    || pdfStatus.phase === "rendering"
+    || pdfStatus.phase === "printing"
+    || pdfStatus.phase === "waiting";
+  const showZhPdfStatus = pdfStatus.visible && pdfStatus.targetLabel === "中文 PDF";
+  const showEnPdfStatus = pdfStatus.visible && pdfStatus.targetLabel === "英文 PDF";
   const updateDay = (index: number, patch: Partial<DayItem>) => {
     setDays(prev => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
   };
@@ -213,8 +355,6 @@ export function VisaAssistant() {
       };
     }));
   };
-
-  const addDay = () => setDays(prev => [...prev, emptyDay()]);
 
   const handleProvinceChange = (nextProvince: string) => {
     const firstCity = Object.keys(cnGeo[nextProvince])[0];
@@ -233,91 +373,93 @@ export function VisaAssistant() {
     setDays(arr.map(date => ({ ...emptyDay(), date })));
   };
 
-  const applyCascaderSelection = (dayIndex: number, selection: string[]) => {
-    const { country, city, scenic } = parseCascaderSelection(selection);
+  const appendCityRow = (dayIndex: number) => {
+    const currentRows = days[dayIndex]?.countryRows || [emptyCountryRow()];
+    const reusableIndex = findReusableCityRowIndex(currentRows);
+
+    if (reusableIndex >= 0) {
+      return reusableIndex;
+    }
+
+    updateCountryRows(dayIndex, rows => buildCountryRows([
+      ...flattenCountryRows(rows),
+      {
+        country: "",
+        cityRow: emptyCityRow()
+      }
+    ]));
+
+    return flattenCountryRows(currentRows).length;
+  };
+
+  const replaceCitySelection = (dayIndex: number, countryIndex: number, cityIndex: number, selection: string[]) => {
+    const { country, city } = parseCascaderSelection(selection);
     if (!country || !city) return;
 
     updateCountryRows(dayIndex, rows => {
-      const nextRows = [...rows];
-      let targetIndex = nextRows.findIndex(row => row.country === country);
+      const nextEntries = flattenCountryRows(rows);
+      const entryIndex = getFlatEntryIndex(rows, countryIndex, cityIndex);
+      const sourceEntry = nextEntries[entryIndex];
 
-      if (targetIndex === -1) {
-        targetIndex = nextRows.findIndex(row => !hasCountryRowContent(row));
+      if (!sourceEntry) {
+        return rows;
       }
 
-      if (targetIndex === -1) {
-        targetIndex = nextRows.length;
-        nextRows.push(emptyCountryRow());
-      }
+      const preservedScenics = sourceEntry.country === country && sourceEntry.cityRow.city === city
+        ? sourceEntry.cityRow.scenics
+        : [];
 
-      const targetRow = nextRows[targetIndex] || emptyCountryRow();
-      let nextTargetRow: CountryRow = {
-        ...targetRow,
-        cityRows: [...targetRow.cityRows],
-        country
+      nextEntries[entryIndex] = {
+        country,
+        cityRow: {
+          ...sourceEntry.cityRow,
+          city,
+          scenics: preservedScenics
+        }
       };
 
-      if (city && !nextTargetRow.cityRows.some(cityRow => cityRow.city === city)) {
-        nextTargetRow = {
-          ...nextTargetRow,
-          cityRows: [...nextTargetRow.cityRows, { city, scenics: [], scenicDraft: "" }]
-        };
-      }
-
-      if (city && scenic) {
-        nextTargetRow = {
-          ...nextTargetRow,
-          scenicCityDraft: city,
-          scenicDraft: "",
-          cityRows: nextTargetRow.cityRows.map(cityRow => (
-            cityRow.city === city
-              ? {
-                  ...cityRow,
-                  scenics: cityRow.scenics.includes(scenic) ? cityRow.scenics : [...cityRow.scenics, scenic]
-                }
-              : cityRow
-          ))
-        };
-      }
-
-      nextRows[targetIndex] = nextTargetRow;
-      return nextRows;
+      return buildCountryRows(nextEntries);
     });
   };
 
-  const removeCountryRow = (dayIndex: number, countryIndex: number) => {
-    updateCountryRows(dayIndex, rows => rows.filter((_, index) => index !== countryIndex));
-  };
-
   const removeCity = (dayIndex: number, countryIndex: number, cityIndex: number) => {
-    updateCountryRows(dayIndex, rows => rows.map((row, index) => {
-      if (index !== countryIndex) return row;
+    updateCountryRows(dayIndex, rows => {
+      const nextEntries = flattenCountryRows(rows);
+      const entryIndex = getFlatEntryIndex(rows, countryIndex, cityIndex);
 
-      const removedCityName = row.cityRows[cityIndex]?.city;
-      const nextScenicCityDraft = row.scenicCityDraft === removedCityName ? "" : row.scenicCityDraft;
+      if (entryIndex < 0 || entryIndex >= nextEntries.length) {
+        return rows;
+      }
 
-      return {
-        ...row,
-        scenicCityDraft: nextScenicCityDraft,
-        scenicDraft: nextScenicCityDraft ? row.scenicDraft : "",
-        cityRows: row.cityRows.filter((_, currentIndex) => currentIndex !== cityIndex)
-      };
-    }));
+      nextEntries.splice(entryIndex, 1);
+      return buildCountryRows(nextEntries);
+    });
   };
 
-  const removeScenic = (dayIndex: number, countryIndex: number, cityIndex: number, scenicIndex: number) => {
-    updateCountryRows(dayIndex, rows => rows.map((row, index) => (
-      index === countryIndex
-        ? {
-            ...row,
-            cityRows: row.cityRows.map((cityRow, currentIndex) => (
-              currentIndex === cityIndex
-                ? { ...cityRow, scenics: cityRow.scenics.filter((_, currentScenicIndex) => currentScenicIndex !== scenicIndex) }
-                : cityRow
-            ))
-          }
-        : row
-    )));
+  const toggleScenicSelection = (dayIndex: number, countryIndex: number, cityIndex: number, scenicName: string, checked: boolean) => {
+    updateCountryRows(dayIndex, rows => {
+      const nextEntries = flattenCountryRows(rows);
+      const entryIndex = getFlatEntryIndex(rows, countryIndex, cityIndex);
+      const targetEntry = nextEntries[entryIndex];
+
+      if (!targetEntry) {
+        return rows;
+      }
+
+      const nextScenics = checked
+        ? Array.from(new Set([...targetEntry.cityRow.scenics, scenicName]))
+        : targetEntry.cityRow.scenics.filter(item => item !== scenicName);
+
+      nextEntries[entryIndex] = {
+        ...targetEntry,
+        cityRow: {
+          ...targetEntry.cityRow,
+          scenics: nextScenics
+        }
+      };
+
+      return buildCountryRows(nextEntries);
+    });
   };
 
   const toggleTransport = (dayIndex: number, transport: string, checked: boolean) => {
@@ -330,67 +472,196 @@ export function VisaAssistant() {
     }));
   };
 
-  const getAirportCandidates = (day: DayItem) => {
-    const airportOptions = Array.from(
-      new Set(
-        day.countryRows
-          .flatMap(row => row.cityRows.map(cityRow => cityRow.city))
-          .flatMap(cityName => cityAirportMap[cityName] || [])
-      )
-    );
-
-    return airportOptions.length ? airportOptions : ["其他机场"];
+  const getDepartureAirportCandidates = () => {
+    return getAirportsFromCities(allSelectedCities);
   };
 
-  const getTimeHint = (day: DayItem) => {
-    const previewPoints = getPreviewPoints(day);
-    const previewFrom = previewPoints[0] || "";
-    const previewTo = previewPoints[previewPoints.length - 1] || "";
+  const getArrivalAirportCandidates = () => {
+    return getAirportsFromCities(allSelectedCities);
+  };
+
+  const getTimeHint = (dayIndex: number) => {
+    const previousPrimaryCity = dayIndex > 0 ? getPrimaryCity(days[dayIndex - 1]) : "";
+    const currentPrimaryCity = getPrimaryCity(days[dayIndex]);
+    const crossDayTip = getTravelTimeHint(previousPrimaryCity, currentPrimaryCity);
+
+    if (crossDayTip) {
+      return `${previousPrimaryCity} → ${currentPrimaryCity}，${crossDayTip}`;
+    }
+
+    const routeStops = getRouteStops(days[dayIndex]);
+    const previewFrom = routeStops[0] || "";
+    const previewTo = routeStops[routeStops.length - 1] || "";
 
     if (!previewFrom || !previewTo) return "";
-    return crossCityTime[`${previewFrom}-${previewTo}`] || crossCityTime[`${previewTo}-${previewFrom}`] || "";
+    const intraDayTip = getTravelTimeHint(previewFrom, previewTo);
+    return intraDayTip ? `${previewFrom} → ${previewTo}，${intraDayTip}` : "";
   };
 
+  const resetPdfStatusLater = () => {
+    window.setTimeout(() => {
+      setPdfStatus({
+        visible: false,
+        targetLabel: "",
+        ...idlePdfExportStatus
+      });
+    }, pdfStatusResetDelayMs);
+  };
+
+  const buildPdfStatus = (
+    phase: Exclude<PdfExportStatus["phase"], "idle">,
+    targetLabel: string
+  ): PdfStatusViewState => ({
+    visible: true,
+    targetLabel,
+    ...advancePdfExportState(phase)
+  });
+
   const generateItinerary = () => {
-    const zhRows: string[] = [];
-    const enRows: string[] = [];
+    const zhRows: ItineraryDocumentRow[] = [];
+    const enRows: ItineraryDocumentRow[] = [];
     days.forEach((d, idx) => {
-      const routePoints = getPreviewPoints(d);
-      const depart = routePoints[0] || "-";
-      const arrive = routePoints[routePoints.length - 1] || depart;
-      const via = routePoints.slice(1, -1);
+      const routeStops = getRouteStops(d);
+      const previousPrimaryCity = idx > 0 ? getPrimaryCity(days[idx - 1]) : "";
+      const currentPrimaryCity = getPrimaryCity(d);
+      const includeCheckIn = Boolean(idx > 0 && currentPrimaryCity && previousPrimaryCity && currentPrimaryCity !== previousPrimaryCity);
+      const crossDayTip = includeCheckIn ? getTravelTimeHint(previousPrimaryCity, currentPrimaryCity) : "";
+      const crossDayTipEn = translateTimeHintToEn(crossDayTip);
+      const depart = routeStops[0] || "-";
+      const arrive = routeStops[routeStops.length - 1] || depart;
+      const via = routeStops.slice(1, -1);
       const scenicRows = d.countryRows.flatMap(row => row.cityRows.filter(cityRow => cityRow.scenics.length).map(cityRow => ({ city: cityRow.city, scenics: cityRow.scenics })));
-      const scenicCN = scenicRows.map(row => `${escapeHtml(row.city)}：${row.scenics.map(escapeHtml).join("、")}`).join("；") || "-";
-      const scenicEN = scenicRows.map(row => {
-        const scenicNames = row.scenics.map(scenic => {
-          const hit = Object.values(scenicMap).flat().find(v => v[0] === scenic);
-          return escapeHtml(hit?.[1] || scenic);
-        });
-        return `${escapeHtml(cityToEn(row.city))}: ${scenicNames.join(", ")}`;
-      }).join("; ") || "-";
-      const hotelCN = `酒店：${escapeHtml(d.hotelName || "-")}；地址：${escapeHtml(d.hotelAddress || "-")}；联系方式：${escapeHtml(d.hotelContact || "-")}`;
-      const hotelEN = `Hotel: ${escapeHtml(d.hotelName || "-")}; Address: ${escapeHtml(d.hotelAddress || "-")}; Contact: ${escapeHtml(d.hotelContact || "-")}`;
-      const translatedTransports = d.transports.map(t => escapeHtml(({ 飞机: "Flight", 火车: "Train", 汽车: "Car", 地铁: "Metro", 步行: "Walking", 公交: "Bus", 轮渡: "Ferry", 出租车: "Taxi" }[t] || t)));
-      const transCNBase = d.transports.map(escapeHtml).join(" + ");
+      const scenicPartsCN = scenicRows.map(row => `${row.city}：${row.scenics.join("、")}`);
+      const scenicPartsEN = scenicRows.map(row => {
+        const scenicNames = row.scenics.map(scenic => scenicToEn(scenic));
+        return `${cityToEn(row.city)}: ${scenicNames.join(", ")}`;
+      });
+      if (includeCheckIn) {
+        scenicPartsCN.push("办理入住");
+        scenicPartsEN.push("Hotel check-in");
+      }
+      const scenicCN = scenicPartsCN.join("；") || "-";
+      const scenicEN = scenicPartsEN.join("; ") || "-";
+      const hotelCN = `酒店：${d.hotelName || "-"}；地址：${d.hotelAddress || "-"}；联系方式：${d.hotelContact || "-"}`;
+      const hotelEN = `Hotel: ${d.hotelName || "-"}; Address: ${d.hotelAddress || "-"}; Contact: ${d.hotelContact || "-"}`;
+      const translatedTransports = d.transports.map(transport => transportLabelEnMap[transport] || transport);
+      const transCNBase = d.transports.join(" + ");
       const transENBase = translatedTransports.join(" + ");
       const flightCN = d.transports.includes("飞机")
-        ? `（起飞：${escapeHtml(d.departureAirport || "-")}；落地：${escapeHtml(d.arrivalAirport || "-")}；航班号：${escapeHtml(d.flightNo || "-")}）`
+        ? `（起飞：${d.departureAirport || "-"}；落地：${d.arrivalAirport || "-"}；航班号：${d.flightNo || "-"}）`
         : "";
       const flightEN = d.transports.includes("飞机")
-        ? ` (Dep: ${escapeHtml(d.departureAirport || "-")}; Arr: ${escapeHtml(d.arrivalAirport || "-")}; Flight No.: ${escapeHtml(d.flightNo || "-")})`
+        ? ` (Dep: ${d.departureAirport || "-"}; Arr: ${d.arrivalAirport || "-"}; Flight No.: ${d.flightNo || "-"})`
         : "";
-      const transCN = (transCNBase ? `${transCNBase}${flightCN}` : "-");
-      const transEN = (transENBase ? `${transENBase}${flightEN}` : "-");
-      const key = `${depart}-${arrive}`;
-      const rev = `${arrive}-${depart}`;
-      const tip = crossCityTime[key] || crossCityTime[rev];
+      const intraDayTip = getTravelTimeHint(depart, arrive);
+      const intraDayTipEn = translateTimeHintToEn(intraDayTip);
+      const transCNParts = [
+        includeCheckIn ? `跨城交通：${previousPrimaryCity} → ${currentPrimaryCity}${crossDayTip ? `（${crossDayTip}）` : ""}` : "",
+        transCNBase ? `${transCNBase}${flightCN}` : "",
+        !includeCheckIn && intraDayTip ? `交通参考：${intraDayTip}` : ""
+      ].filter(Boolean);
+      const transENParts = [
+        includeCheckIn
+          ? `Intercity transfer: ${cityToEn(previousPrimaryCity)} to ${cityToEn(currentPrimaryCity)}${crossDayTipEn ? ` (${crossDayTipEn})` : ""}`
+          : "",
+        transENBase ? `${transENBase}${flightEN}` : "",
+        !includeCheckIn && intraDayTipEn ? `Travel reference: ${intraDayTipEn}` : ""
+      ].filter(Boolean);
+      const transCN = transCNParts.join("；") || "-";
+      const transEN = transENParts.join("; ") || "-";
       const routeCN = via.length ? `${depart} → ${via.join(" → ")} → ${arrive}` : depart === arrive ? depart : `${depart} → ${arrive}`;
       const routeEN = via.length ? `${cityToEn(depart)} → ${via.map(cityToEn).join(" → ")} → ${cityToEn(arrive)}` : depart === arrive ? cityToEn(depart) : `${cityToEn(depart)} to ${cityToEn(arrive)}`;
-      zhRows.push(`<tr><td>${idx + 1}</td><td>${escapeHtml(formatDateCN(d.date))}</td><td>${escapeHtml(routeCN)}</td><td>${scenicCN}</td><td>${hotelCN}</td><td>${transCN}${tip ? `（${escapeHtml(tip)}）` : ""}</td></tr>`);
-      enRows.push(`<tr><td>${idx + 1}</td><td>${escapeHtml(formatDateEN(d.date))}</td><td>${escapeHtml(routeEN)}</td><td>${scenicEN}</td><td>${hotelEN}</td><td>${transEN}</td></tr>`);
+
+      zhRows.push({
+        day: String(idx + 1),
+        date: formatDateCN(d.date),
+        city: routeCN,
+        attractions: scenicCN,
+        accommodation: hotelCN,
+        transportation: transCN
+      });
+
+      enRows.push({
+        day: String(idx + 1),
+        date: formatDateEN(d.date),
+        city: routeEN,
+        attractions: scenicEN,
+        accommodation: hotelEN,
+        transportation: transEN
+      });
     });
-    setZhItinerary(`<div><strong>意大利申根签证行程单（中文版）</strong></div><div>申请人：${escapeHtml(applicantName || "未填写")} ｜ 护照号：${escapeHtml(passportNo || "未填写")} ｜ 出发地：${escapeHtml(`${province}${city}`)}</div><table><thead><tr><th>天数</th><th>日期（星期）</th><th>城市</th><th>景点</th><th>住宿</th><th>交通方式</th></tr></thead><tbody>${zhRows.join("")}</tbody></table>`);
-    setEnItinerary(`<div><strong>ITALY SCHENGEN VISA ITINERARY (ENGLISH)</strong></div><div>Applicant: ${escapeHtml(applicantName || "N/A")} | Passport No.: ${escapeHtml(passportNo || "N/A")} | Departure: ${escapeHtml(cityToEn(city))}, China</div><table><thead><tr><th>Day</th><th>Date (Weekday)</th><th>City</th><th>Attractions</th><th>Accommodation</th><th>Transportation</th></tr></thead><tbody>${enRows.join("")}</tbody></table>`);
+
+    const zhDocument = buildItineraryDocument({
+      applicantName,
+      passportNo,
+      departure: `${province}${city}`,
+      locale: "zh",
+      rows: zhRows
+    });
+
+    const enDocument = buildItineraryDocument({
+      applicantName,
+      passportNo,
+      departure: `${cityToEn(city)}, China`,
+      locale: "en",
+      rows: enRows
+    });
+
+    setZhItineraryDocument(zhDocument);
+    setEnItineraryDocument(enDocument);
+    setZhItinerary(renderItineraryHtml(zhDocument));
+    setEnItinerary(renderItineraryHtml(enDocument));
+  };
+
+  const handleExportDocx = async (locale: "zh" | "en") => {
+    const targetDocument = locale === "zh" ? zhItineraryDocument : enItineraryDocument;
+
+    if (!targetDocument) {
+      return;
+    }
+
+    await exportItineraryDocx(targetDocument);
+  };
+
+  const handleExportPdf = async (locale: "zh" | "en") => {
+    const targetDocument = locale === "zh" ? zhItineraryDocument : enItineraryDocument;
+
+    if (!targetDocument) {
+      return;
+    }
+
+    const targetLabel = locale === "zh" ? "中文 PDF" : "英文 PDF";
+    setPdfStatus(buildPdfStatus("building", targetLabel));
+
+    try {
+      setPdfStatus(buildPdfStatus("rendering", targetLabel));
+      const printWindow = openItineraryPrintWindow(targetDocument);
+      let finished = false;
+
+      printWindow.addEventListener("afterprint", () => {
+        finished = true;
+        setPdfStatus(buildPdfStatus("done", targetLabel));
+        printWindow.close();
+        resetPdfStatusLater();
+      }, { once: true });
+
+      printWindow.addEventListener("beforeunload", () => {
+        if (finished) {
+          return;
+        }
+
+        setPdfStatus(buildPdfStatus("cancelled", targetLabel));
+        resetPdfStatusLater();
+      }, { once: true });
+
+      setPdfStatus(buildPdfStatus("printing", targetLabel));
+      printWindow.focus();
+      setPdfStatus(buildPdfStatus("waiting", targetLabel));
+      printWindow.print();
+    } catch {
+      setPdfStatus(buildPdfStatus("error", targetLabel));
+      resetPdfStatusLater();
+    }
   };
 
   const generateLetter = () => {
@@ -408,9 +679,6 @@ export function VisaAssistant() {
         <MagicCard className={cn(panelShellClassName, "p-6")}>
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-3">
-              <Badge variant="outline" className="rounded-full border-border bg-muted/50 px-3 py-1 text-[11px] font-medium tracking-[0.12em] text-muted-foreground">
-                计划工作台
-              </Badge>
               <div className="space-y-1">
                 <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">意大利申根签证材料助手</h1>
                 <p className="max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
@@ -453,13 +721,11 @@ export function VisaAssistant() {
           <MagicCard className={cn(panelShellClassName, "p-0")}>
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-5">
               <div className="space-y-1">
-                <Badge variant="outline" className="rounded-full border-border bg-muted/50 px-3 py-1 text-[11px] font-medium tracking-[0.12em] text-muted-foreground">
-                  行程计划
-                </Badge>
+              
                 <h2 className="text-2xl font-semibold text-foreground">签证行程单生成</h2>
                 <p className="text-sm text-muted-foreground">按天维护路线、住宿与交通信息，并在右侧生成中英文预览。</p>
               </div>
-              <ItineraryToolbar onAddDay={addDay} onGenerate={generateItinerary} />
+              <ItineraryToolbar />
             </div>
             <div className="space-y-5 px-6 py-6">
               <TripBasicsSection
@@ -487,13 +753,14 @@ export function VisaAssistant() {
                       index={i}
                       day={d}
                       countryOptions={countryOptions}
-                      airportCandidates={getAirportCandidates(d)}
-                      timeHint={getTimeHint(d)}
+                      departureAirportCandidates={getDepartureAirportCandidates()}
+                      arrivalAirportCandidates={getArrivalAirportCandidates()}
+                      timeHint={getTimeHint(i)}
                       onDateChange={value => updateDay(i, { date: value })}
-                      onApplyCascaderSelection={selection => applyCascaderSelection(i, selection)}
-                      onRemoveCountryRow={countryIndex => removeCountryRow(i, countryIndex)}
+                      onAddCitySelection={() => appendCityRow(i)}
+                      onReplaceCitySelection={(countryIndex, cityIndex, selection) => replaceCitySelection(i, countryIndex, cityIndex, selection)}
+                      onToggleScenicSelection={(countryIndex, cityIndex, scenicName, checked) => toggleScenicSelection(i, countryIndex, cityIndex, scenicName, checked)}
                       onRemoveCity={(countryIndex, cityIndex) => removeCity(i, countryIndex, cityIndex)}
-                      onRemoveScenic={(countryIndex, cityIndex, scenicIndex) => removeScenic(i, countryIndex, cityIndex, scenicIndex)}
                       onHotelChange={patch => updateDay(i, patch)}
                       onToggleTransport={(transport, checked) => toggleTransport(i, transport, checked)}
                       onFlightChange={patch => updateDay(i, patch)}
@@ -503,9 +770,101 @@ export function VisaAssistant() {
               })}
               </div>
 
+              <div className="flex justify-start">
+                <Button type="button" className="px-5" onClick={generateItinerary}>
+                  生成中英文行程单
+                </Button>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
-                <GeneratedPreview title="中文版（可编辑）" html={zhItinerary} />
-                <GeneratedPreview title="英文版（可编辑）" html={enItinerary} />
+                <GeneratedPreview
+                  title="中文版（可编辑）"
+                  html={zhItinerary}
+                  footer={(
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!zhItineraryDocument || isPdfExportBusy}
+                          onClick={() => handleExportDocx("zh")}
+                        >
+                          导出中文 DOCX
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!zhItineraryDocument || isPdfExportBusy}
+                          onClick={() => handleExportPdf("zh")}
+                        >
+                          导出中文 PDF
+                        </Button>
+                      </div>
+                      {showZhPdfStatus ? (
+                        <div className="rounded-xl border border-border bg-muted/40 p-3">
+                          <div className="mb-2 flex items-center justify-between text-sm font-medium text-foreground">
+                            <span>{pdfStatus.targetLabel}</span>
+                            <span>{pdfStatus.progress}%</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-border/70">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                pdfStatus.phase === "error" ? "bg-destructive" : "bg-primary"
+                              )}
+                              style={{ width: `${pdfStatus.progress}%` }}
+                            />
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">{pdfStatus.message}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                />
+                <GeneratedPreview
+                  title="英文版（可编辑）"
+                  html={enItinerary}
+                  footer={(
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!enItineraryDocument || isPdfExportBusy}
+                          onClick={() => handleExportDocx("en")}
+                        >
+                          导出英文 DOCX
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!enItineraryDocument || isPdfExportBusy}
+                          onClick={() => handleExportPdf("en")}
+                        >
+                          导出英文 PDF
+                        </Button>
+                      </div>
+                      {showEnPdfStatus ? (
+                        <div className="rounded-xl border border-border bg-muted/40 p-3">
+                          <div className="mb-2 flex items-center justify-between text-sm font-medium text-foreground">
+                            <span>{pdfStatus.targetLabel}</span>
+                            <span>{pdfStatus.progress}%</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-border/70">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                pdfStatus.phase === "error" ? "bg-destructive" : "bg-primary"
+                              )}
+                              style={{ width: `${pdfStatus.progress}%` }}
+                            />
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">{pdfStatus.message}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                />
               </div>
             </div>
           </MagicCard>
@@ -532,7 +891,7 @@ export function VisaAssistant() {
             ))}</div>
             <Textarea className="mt-3" placeholder="其他需解释内容" value={otherExplain} onChange={e => setOtherExplain(e.target.value)} />
             <div className="mt-4">
-              <Button onClick={generateLetter}>生成中英文解释信</Button>
+              <Button type="button" onClick={generateLetter}>生成中英文解释信</Button>
             </div>
             <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm font-medium text-destructive">解释信结尾需手写签名，请打印后务必手写签名再提交至领馆。</div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">

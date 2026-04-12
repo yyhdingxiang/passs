@@ -26,11 +26,6 @@
       "sourceType": "github",
       "computedHash": "3cc95ca0ec7cfb3fe57af882e08eb3d422aa347b7bfbdb8fa462b1701128a2aa"
     },
-    "brainstorming": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "computedHash": "8df9b47092524833138b58682d03f2e153a242e550d1693657afdbee0cc9cdb0"
-    },
     "clarify": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -156,11 +151,6 @@
       "sourceType": "github",
       "computedHash": "72e9ab72627e4fd8ed26a582e82309a98ecdc4f6e1c99418430ac05682c9e91d"
     },
-    "test-driven-development": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "computedHash": "126f1ebf6ccd414f42544f6e83d8cc5adb089e1108eaffb7c400701e37eecd9f"
-    },
     "typeset": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -170,11 +160,6 @@
       "source": "obra/superpowers",
       "sourceType": "github",
       "computedHash": "52bbb4b6e80918e83e92a1514f3b3757712154c2a8a42de24919e48a794c54fc"
-    },
-    "using-superpowers": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "computedHash": "e0eced9fbb205c212f420aded0c6f2bf5d5f059254679a8459b4fe72390160be"
     },
     "verification-before-completion": {
       "source": "obra/superpowers",

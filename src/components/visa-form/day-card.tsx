@@ -9,21 +9,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { DayFlightPatch, DayHotelPatch, DayItem } from "@/components/visa-assistant";
+import { scenicMap } from "@/data/schengen-data";
 import { buildCountryCityScenicOptions } from "@/lib/visa-form-options";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Plane, Trash2, X } from "lucide-react";
+import { CalendarDays, Plane, Trash2 } from "lucide-react";
 
 export type DayCardProps = {
   index: number;
   day: DayItem;
   countryOptions: string[];
-  airportCandidates: string[];
+  departureAirportCandidates: string[];
+  arrivalAirportCandidates: string[];
   timeHint: string;
   onDateChange: (value: string) => void;
-  onApplyCascaderSelection: (selection: string[]) => void;
-  onRemoveCountryRow: (countryIndex: number) => void;
+  onAddCitySelection: () => number;
+  onReplaceCitySelection: (countryIndex: number, cityIndex: number, selection: string[]) => void;
+  onToggleScenicSelection: (countryIndex: number, cityIndex: number, scenicName: string, checked: boolean) => void;
   onRemoveCity: (countryIndex: number, cityIndex: number) => void;
-  onRemoveScenic: (countryIndex: number, cityIndex: number, scenicIndex: number) => void;
   onHotelChange: (patch: DayHotelPatch) => void;
   onToggleTransport: (transport: string, checked: boolean) => void;
   onFlightChange: (patch: DayFlightPatch) => void;
@@ -36,41 +38,83 @@ export function DayCard(props: DayCardProps) {
     index,
     day,
     countryOptions,
-    airportCandidates,
+    departureAirportCandidates,
+    arrivalAirportCandidates,
     timeHint,
     onDateChange,
-    onApplyCascaderSelection,
-    onRemoveCountryRow,
+    onAddCitySelection,
+    onReplaceCitySelection,
+    onToggleScenicSelection,
     onRemoveCity,
-    onRemoveScenic,
     onHotelChange,
     onToggleTransport,
     onFlightChange
   } = props;
-  const filledCountryRows = React.useMemo(
-    () => day.countryRows
-      .map((row, rowIndex) => ({ row, rowIndex }))
-      .filter(item => item.row.country || item.row.cityRows.length),
+  const cascaderOptions = React.useMemo(() => buildCountryCityScenicOptions(countryOptions), [countryOptions]);
+  const cityPickerRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
+
+  const cityVisitRows = React.useMemo(
+    () => {
+      const entries = day.countryRows.flatMap((row, countryIndex) => row.cityRows.map((cityRow, cityIndex) => ({
+        country: row.country,
+        countryIndex,
+        cityIndex,
+        cityRow
+      })));
+
+      return entries.length ? entries : [{
+        country: "",
+        countryIndex: 0,
+        cityIndex: 0,
+        cityRow: {
+          city: "",
+          scenics: [],
+          scenicDraft: ""
+        }
+      }];
+    },
     [day.countryRows]
   );
-  const cascaderOptions = React.useMemo(() => buildCountryCityScenicOptions(countryOptions), [countryOptions]);
-  const filledCountryCount = filledCountryRows.length;
+
+  const openPickerByIndex = React.useCallback((rowIndex: number) => {
+    cityPickerRefs.current[rowIndex]?.querySelector<HTMLElement>('[role="combobox"]')?.click();
+  }, []);
+
+  const handleAppendCityRow = React.useCallback(() => {
+    const nextRowIndex = onAddCitySelection();
+
+    // Wait for the reused or appended row to render, then open its city picker.
+    queueMicrotask(() => {
+      requestAnimationFrame(() => openPickerByIndex(nextRowIndex));
+    });
+  }, [onAddCitySelection, openPickerByIndex]);
+
+  const getScenicChoicesByCity = React.useCallback((city: string) => {
+    if (!city) return [];
+    return scenicMap[city] || [];
+  }, []);
 
   return (
     <Card className="border-border bg-card shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
       <CardHeader className="border-b border-border bg-muted/40 pb-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <div className="inline-flex rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold tracking-[0.12em] text-muted-foreground">
-              DAY {index + 1}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">第 {index + 1} 天行程安排</h3>
-              <p className="text-sm text-muted-foreground">逐日维护国家、城市、景点、酒店与交通信息。</p>
-            </div>
+        <div className="space-y-2">
+          <div className="inline-flex rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold tracking-[0.12em] text-muted-foreground">
+            DAY {index + 1}
           </div>
-          <div className="w-full max-w-sm space-y-1.5">
-            <Label htmlFor={`day-date-${index}`}>日期</Label>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">第 {index + 1} 天行程安排</h3>
+            <p className="text-sm text-muted-foreground">逐日维护城市、景点、酒店与交通信息。</p>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-5 pt-5">
+        <section className="rounded-xl border border-border bg-muted/40 p-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor={`day-date-${index}`} className="text-sm font-semibold text-foreground">日期</Label>
+            <span className="text-xs font-medium text-destructive">必填</span>
+          </div>
+          <div className="mt-3 max-w-sm">
             <div className="relative">
               <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -82,131 +126,152 @@ export function DayCard(props: DayCardProps) {
               />
             </div>
           </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-5 pt-5">
-        <section className="rounded-xl border border-border bg-muted/40 p-4">
-          <div className="mb-3 space-y-1">
-            <p className="text-sm font-semibold text-foreground">路线快速录入</p>
-            <p className="text-xs leading-5 text-muted-foreground">
-              点击国家先展开城市，点击城市可直接录入；如需继续补录景点，请点右侧展开按钮进入下一级。
-            </p>
-          </div>
-          <Cascader
-            options={cascaderOptions}
-            onChange={onApplyCascaderSelection}
-            placeholder="选择国家 / 城市 / 景点"
-            className="w-full bg-card"
-            popupClassName="min-w-[320px]"
-          />
         </section>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-semibold text-foreground">停留国家与景点结构</h4>
-              <p className="text-xs text-muted-foreground">上方级联负责主录入，这里只保留结果展示与删除整理。</p>
+        <section className="rounded-xl border border-border bg-muted/40 p-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-semibold text-foreground">游览城市与景点</Label>
+              <span className="text-xs font-medium text-destructive">必填</span>
+              <span className="text-xs text-muted-foreground">只需要维护当日游览城市，出发城市将取前一日游览城市</span>
             </div>
-            <div className="text-xs font-medium text-muted-foreground">共 {filledCountryCount} 个已填写国家段</div>
-          </div>
 
-          {filledCountryRows.length ? filledCountryRows.map(({ row: countryRow, rowIndex: countryIndex }, visibleIndex) => {
-            return (
-              <div
-                key={`${countryIndex}-${countryRow.country || "empty"}`}
-                className="rounded-xl border border-border bg-card p-4"
-              >
-                <div className="flex flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">国家段 {visibleIndex + 1}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {countryRow.country ? `${countryRow.country} · ${countryRow.cityRows.length} 个城市` : "待选择国家"}
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="destructiveOutline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => onRemoveCountryRow(countryIndex)}
-                  >
-                    <Trash2 className="size-3.5" />
-                    删除国家段
-                  </Button>
-                </div>
+            <div className="space-y-3">
+              {cityVisitRows.map(({ country, countryIndex, cityIndex, cityRow }, rowIndex) => {
+                const scenicChoices = getScenicChoicesByCity(cityRow.city);
+                const hasCitySelection = Boolean(country && cityRow.city);
+                const isPrimaryCityRow = rowIndex === 0;
 
-                <div className="mt-4 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                  继续补录国家、城市或景点时，请使用上方级联选择器，系统会自动归并到对应国家段。
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {countryRow.cityRows.length ? countryRow.cityRows.map((cityRow, cityIndex) => (
-                    <div key={`${cityIndex}-${cityRow.city}`} className="rounded-lg border border-border bg-muted/40 p-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <div className="text-sm font-semibold text-foreground">{cityRow.city}</div>
-                          <div className="text-xs text-muted-foreground">已选 {cityRow.scenics.length} 个景点</div>
+                return (
+                  <div key={`${countryIndex}-${cityIndex}-${cityRow.city}-${rowIndex}`} className="rounded-xl border border-border bg-card p-4">
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_auto] xl:items-start">
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Label className="text-xs font-medium text-muted-foreground">
+                            {isPrimaryCityRow ? "城市 1 " : `城市 ${rowIndex + 1} `}
+                          </Label>
+                          {isPrimaryCityRow && (
+                            <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                              用于跨日交通与机场参考
+                            </span>
+                          )}
                         </div>
+                        <div
+                          ref={node => {
+                            cityPickerRefs.current[rowIndex] = node;
+                          }}
+                        >
+                          <Cascader
+                            options={cascaderOptions}
+                            value={country && cityRow.city ? [country, cityRow.city] : undefined}
+                            onChange={selection => onReplaceCitySelection(countryIndex, cityIndex, selection)}
+                            placeholder="选择国家 / 城市"
+                            className="w-full bg-background"
+                            popupClassName="min-w-[320px]"
+                            allowClear={false}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <Label className="text-xs font-medium text-muted-foreground">该城市景点</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {hasCitySelection ? "非必填，勾选即生效，可随时取消" : "请先选择该行城市"}
+                          </span>
+                        </div>
+                        <div className="space-y-3 rounded-lg border border-border bg-background/80 p-3">
+                          {cityRow.scenics.length ? (
+                            <div className="flex flex-wrap gap-2">
+                              {cityRow.scenics.map(scenic => (
+                                <span
+                                  key={`${country}-${cityRow.city}-${scenic}`}
+                                  className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground"
+                                >
+                                  {scenic}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">
+                              暂未选择景点，若当天以赶路或休整为主，可留空。
+                              先确定该行城市，再勾选对应景点，避免误点后关闭但未生效。
+                            </div>
+                          )}
+
+                          
+                          {hasCitySelection && !scenicChoices.length && (
+                            <div className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                              当前城市暂无预置景点，可只保留城市或补充自定义文案到最终预览中。
+                            </div>
+                          )}
+
+                          {hasCitySelection && scenicChoices.length > 0 && (
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {scenicChoices.map(([scenicName, scenicNameEn, distance, price]) => {
+                                const checked = cityRow.scenics.includes(scenicName);
+
+                                return (
+                                  <label
+                                    key={`${country}-${cityRow.city}-${scenicName}`}
+                                    className={cn(
+                                      "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition",
+                                      checked
+                                        ? "border-primary/40 bg-primary/5"
+                                        : "border-border bg-background hover:border-foreground/20"
+                                    )}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={value => onToggleScenicSelection(countryIndex, cityIndex, scenicName, value === true)}
+                                    />
+                                    <div className="min-w-0 space-y-1">
+                                      <div className="text-sm font-medium text-foreground">{scenicName}</div>
+                                      <div className="text-xs leading-5 text-muted-foreground">
+                                        {scenicNameEn}
+                                        {(distance || price) ? ` · ${[distance, price].filter(Boolean).join(" · ")}` : ""}
+                                      </div>
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end xl:pt-6">
                         <Button
                           type="button"
                           variant="destructiveOutline"
                           size="sm"
-                          className="h-8 px-2"
+                          className="gap-1.5"
                           onClick={() => onRemoveCity(countryIndex, cityIndex)}
                         >
+                          <Trash2 className="size-3.5" />
                           删除城市
                         </Button>
                       </div>
-
-                      {cityRow.scenics.length ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {cityRow.scenics.map((scenic, scenicIndex) => (
-                            <div
-                              key={`${scenicIndex}-${scenic}`}
-                              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2 py-1 text-xs text-foreground"
-                            >
-                              <span className="pl-1">{scenic}</span>
-                              <Button
-                                type="button"
-                                variant="destructiveOutline"
-                                size="icon"
-                                className="size-5 rounded-full"
-                                onClick={() => onRemoveScenic(countryIndex, cityIndex, scenicIndex)}
-                                aria-label={`删除景点 ${scenic}`}
-                              >
-                                <X className="size-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="mt-3 rounded-lg border border-dashed border-border bg-background/80 px-3 py-2 text-xs text-muted-foreground">
-                          尚未添加景点，可先选择城市再添加景点。
-                        </div>
-                      )}
                     </div>
-                  )) : (
-                    <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-4 text-sm text-muted-foreground">
-                      当前国家段尚未添加城市。
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          }) : (
-            <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-4 text-sm text-muted-foreground">
-              暂未录入路线，请优先使用上方级联选择器添加国家、城市与景点。
+                  </div>
+                );
+              })}
             </div>
-          )}
+
+            <div className="flex items-center justify-end">
+              <Button type="button" variant="outline" size="sm" className="bg-card" onClick={handleAppendCityRow}>
+                + 新增游览城市
+              </Button>
+            </div>
+          </div>
         </section>
 
         <section className="rounded-xl border border-border bg-muted/40 p-4">
-          <div className="mb-3 space-y-1">
-            <h4 className="text-sm font-semibold text-foreground">酒店信息</h4>
-            <p className="text-xs text-muted-foreground">建议保持与预订单一致，联系方式尽量填写可核验内容。</p>
+          <div className="mb-3 flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-foreground">住宿信息</h4>
+            <span className="text-xs font-medium text-destructive">必填</span>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 xl:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor={`hotel-name-${index}`}>酒店名称</Label>
               <Input
@@ -225,15 +290,15 @@ export function DayCard(props: DayCardProps) {
                 onChange={e => onHotelChange({ hotelContact: e.target.value })}
               />
             </div>
-          </div>
-          <div className="mt-3 space-y-1.5">
-            <Label htmlFor={`hotel-address-${index}`}>酒店地址</Label>
-            <Input
-              id={`hotel-address-${index}`}
-              value={day.hotelAddress}
-              placeholder="酒店地址"
-              onChange={e => onHotelChange({ hotelAddress: e.target.value })}
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor={`hotel-address-${index}`}>酒店地址</Label>
+              <Input
+                id={`hotel-address-${index}`}
+                value={day.hotelAddress}
+                placeholder="酒店地址"
+                onChange={e => onHotelChange({ hotelAddress: e.target.value })}
+              />
+            </div>
           </div>
         </section>
 
@@ -242,7 +307,7 @@ export function DayCard(props: DayCardProps) {
             <Plane className="size-4 text-muted-foreground" />
             <div>
               <h4 className="text-sm font-semibold text-foreground">交通方式</h4>
-              <p className="text-xs text-muted-foreground">可多选，涉及飞机时补齐起降机场与航班号。</p>
+              <p className="text-xs text-muted-foreground">必填，可多选；涉及飞机时补齐起降机场与航班号。</p>
             </div>
           </div>
 
@@ -282,7 +347,7 @@ export function DayCard(props: DayCardProps) {
                     <SelectValue placeholder="选择起飞机场" />
                   </SelectTrigger>
                   <SelectContent>
-                    {airportCandidates.map(airport => (
+                    {departureAirportCandidates.map(airport => (
                       <SelectItem key={`dep-${airport}`} value={airport}>
                         {airport}
                       </SelectItem>
@@ -300,7 +365,7 @@ export function DayCard(props: DayCardProps) {
                     <SelectValue placeholder="选择落地机场" />
                   </SelectTrigger>
                   <SelectContent>
-                    {airportCandidates.map(airport => (
+                    {arrivalAirportCandidates.map(airport => (
                       <SelectItem key={`arr-${airport}`} value={airport}>
                         {airport}
                       </SelectItem>
@@ -327,6 +392,7 @@ export function DayCard(props: DayCardProps) {
             </div>
           )}
         </section>
+
       </CardContent>
     </Card>
   );

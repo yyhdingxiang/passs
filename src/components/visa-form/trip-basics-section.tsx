@@ -39,12 +39,12 @@ function formatFieldDate(value: string) {
   return date ? format(date, "yyyy-MM-dd") : "未选择";
 }
 
-function formatRangeLabel(range: DateRange | undefined) {
-  if (range?.from && range?.to) {
+function formatRangeLabel(range: DateRange | undefined, awaitingReturnDate: boolean) {
+  if (range?.from && range?.to && !awaitingReturnDate) {
     return `${format(range.from, "yyyy-MM-dd")} - ${format(range.to, "yyyy-MM-dd")}`;
   }
   if (range?.from) {
-    return `${format(range.from, "yyyy-MM-dd")} - 请选择结束日期`;
+    return `${format(range.from, "yyyy-MM-dd")} - 请选择返回日期`;
   }
   return "选择出发和返回日期";
 }
@@ -67,23 +67,64 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
     onAutoBuildDays
   } = props;
   const [datePickerOpen, setDatePickerOpen] = React.useState(false);
+  const [pendingStartDate, setPendingStartDate] = React.useState<Date | undefined>(undefined);
+
+  const committedStartDate = React.useMemo(() => parseDate(tripStartDate), [tripStartDate]);
+  const committedEndDate = React.useMemo(() => parseDate(tripEndDate), [tripEndDate]);
 
   const selectedRange = React.useMemo<DateRange | undefined>(() => {
-    const from = parseDate(tripStartDate);
-    const to = parseDate(tripEndDate);
+    const from = pendingStartDate ?? committedStartDate;
+    const to = committedEndDate;
     if (!from && !to) return undefined;
-    return { from, to };
-  }, [tripEndDate, tripStartDate]);
+    if (!from) return undefined;
+    return { from, to: to ?? from };
+  }, [committedEndDate, committedStartDate, pendingStartDate]);
 
-  const handleRangeSelect = (range: DateRange | undefined) => {
+  const awaitingReturnDate = Boolean(selectedRange?.from && (!committedEndDate || pendingStartDate));
+
+  const rangeMiddleMatcher = React.useMemo(() => {
+    if (!selectedRange?.from || !selectedRange?.to) return undefined;
+    if (selectedRange.from.getTime() === selectedRange.to.getTime()) return undefined;
+    return (date: Date) => date > selectedRange.from! && date < selectedRange.to!;
+  }, [selectedRange]);
+
+  const updateTripRange = React.useCallback((start: Date, end: Date) => {
+    const [from, to] = start.getTime() <= end.getTime() ? [start, end] : [end, start];
     onTripRangeChange({
-      start: range?.from ? format(range.from, "yyyy-MM-dd") : "",
-      end: range?.to ? format(range.to, "yyyy-MM-dd") : ""
+      start: format(from, "yyyy-MM-dd"),
+      end: format(to, "yyyy-MM-dd")
     });
-    if (range?.from && range?.to) {
-      setDatePickerOpen(false);
+  }, [onTripRangeChange]);
+
+  const handleDaySelect = React.useCallback((date: Date | undefined) => {
+    if (!date) return;
+
+    if (!pendingStartDate) {
+      setPendingStartDate(date);
+      onTripRangeChange({
+        start: format(date, "yyyy-MM-dd"),
+        end: ""
+      });
+      return;
     }
-  };
+
+    updateTripRange(pendingStartDate, date);
+    setPendingStartDate(undefined);
+    setDatePickerOpen(false);
+  }, [onTripRangeChange, pendingStartDate, updateTripRange]);
+
+  const handleDatePickerOpenChange = React.useCallback((open: boolean) => {
+    setDatePickerOpen(open);
+    if (!open) {
+      setPendingStartDate(undefined);
+      return;
+    }
+    if (committedStartDate && !committedEndDate) {
+      setPendingStartDate(committedStartDate);
+      return;
+    }
+    setPendingStartDate(undefined);
+  }, [committedEndDate, committedStartDate]);
 
   return (
     <Card className="border-border bg-card shadow-none">
@@ -127,7 +168,7 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
 
         <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
           <Label>出行日期</Label>
-          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+          <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
             <PopoverTrigger asChild>
               <Button
                 type="button"
@@ -137,17 +178,22 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
                   !selectedRange && "text-muted-foreground"
                 )}
               >
-                <span>{formatRangeLabel(selectedRange)}</span>
+                <span>{formatRangeLabel(selectedRange, awaitingReturnDate)}</span>
                 <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
-                mode="range"
+                mode="single"
                 numberOfMonths={2}
-                selected={selectedRange}
-                defaultMonth={selectedRange?.from}
-                onSelect={handleRangeSelect}
+                selected={selectedRange?.from}
+                defaultMonth={pendingStartDate ?? selectedRange?.from}
+                onSelect={handleDaySelect}
+                modifiers={{
+                  range_start: selectedRange?.from ? [selectedRange.from] : [],
+                  range_end: selectedRange?.to ? [selectedRange.to] : [],
+                  range_middle: rangeMiddleMatcher ? [rangeMiddleMatcher] : []
+                }}
               />
             </PopoverContent>
           </Popover>
@@ -169,8 +215,8 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
         </div>
 
         <div className="xl:col-span-4">
-          <Button variant="outline" className="bg-card" onClick={onAutoBuildDays}>
-            按日期范围自动生成天数
+          <Button type="button" variant="outline" className="bg-card" onClick={onAutoBuildDays}>
+            生成行程安排表
           </Button>
         </div>
       </CardContent>
