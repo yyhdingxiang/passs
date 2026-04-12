@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { MagicCard } from "@/components/magicui/magic-card";
 import { Badge } from "@/components/ui/badge";
@@ -126,12 +126,38 @@ const materialList: Array<[string, "必备" | "可选", string]> = [
 const panelShellClassName = "mb-6 border border-border bg-card/95 shadow-sm";
 const nativeFieldClassName = "h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 const pdfStatusResetDelayMs = 2500;
+const visaAssistantDraftStorageKey = "visa-assistant-draft-v1";
 const cnGeo: Record<string, Record<string, string[]>> = {
   四川省: { 成都市: ["锦江区", "青羊区", "武侯区"], 绵阳市: ["涪城区", "游仙区"], 乐山市: ["市中区", "沙湾区"] },
   广东省: { 广州市: ["天河区", "越秀区", "海珠区"], 深圳市: ["南山区", "福田区", "罗湖区"], 珠海市: ["香洲区", "斗门区"] },
   浙江省: { 杭州市: ["西湖区", "上城区", "滨江区"], 宁波市: ["海曙区", "江北区"], 温州市: ["鹿城区", "龙湾区"] },
   北京市: { 北京市: ["朝阳区", "海淀区", "东城区"] },
   上海市: { 上海市: ["浦东新区", "徐汇区", "静安区"] }
+};
+const defaultProvince = Object.keys(cnGeo)[0] || "";
+const defaultCity = Object.keys(cnGeo[defaultProvince] || {})[0] || "";
+
+type VisaAssistantDraft = {
+  version: 1;
+  tab: TabKey;
+  tripStartDate: string;
+  tripEndDate: string;
+  applicantName: string;
+  passportNo: string;
+  province: string;
+  city: string;
+  days: DayItem[];
+  zhItinerary: string;
+  enItinerary: string;
+  zhItineraryDocument: ItineraryDocument | null;
+  enItineraryDocument: ItineraryDocument | null;
+  letterName: string;
+  travelPurpose: string;
+  guarantees: string[];
+  otherExplain: string;
+  zhLetter: string;
+  enLetter: string;
+  checkMap: Record<number, boolean>;
 };
 
 function emptyCityRow(): CityRow {
@@ -164,6 +190,221 @@ function emptyDay(): DayItem {
     departureAirport: "",
     arrivalAirport: ""
   };
+}
+
+function emptyPdfStatusViewState(): PdfStatusViewState {
+  return {
+    visible: false,
+    targetLabel: "",
+    ...idlePdfExportStatus
+  };
+}
+
+function buildInitialDraft(): VisaAssistantDraft {
+  return {
+    version: 1,
+    tab: "itinerary",
+    tripStartDate: "",
+    tripEndDate: "",
+    applicantName: "",
+    passportNo: "",
+    province: defaultProvince,
+    city: defaultCity,
+    days: [emptyDay()],
+    zhItinerary: "",
+    enItinerary: "",
+    zhItineraryDocument: null,
+    enItineraryDocument: null,
+    letterName: "",
+    travelPurpose: "旅游",
+    guarantees: [],
+    otherExplain: "",
+    zhLetter: "",
+    enLetter: "",
+    checkMap: {}
+  };
+}
+
+function getFirstCityForProvince(provinceName: string) {
+  return Object.keys(cnGeo[provinceName] || {})[0] || defaultCity;
+}
+
+function normalizeCheckMap(value: unknown): Record<number, boolean> {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  return Object.entries(value).reduce<Record<number, boolean>>((accumulator, [key, checked]) => {
+    const numericKey = Number(key);
+    if (!Number.isNaN(numericKey) && typeof checked === "boolean") {
+      accumulator[numericKey] = checked;
+    }
+
+    return accumulator;
+  }, {});
+}
+
+function normalizeCountryRowsFromStorage(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [emptyCountryRow()];
+  }
+
+  const entries: FlatCityEntry[] = [];
+
+  value.forEach(rawRow => {
+    if (!rawRow || typeof rawRow !== "object") {
+      return;
+    }
+
+    const row = rawRow as Partial<CountryRow>;
+    const country = typeof row.country === "string" ? row.country : "";
+    const cityRows = Array.isArray(row.cityRows) ? row.cityRows : [];
+
+    cityRows.forEach(rawCityRow => {
+      if (!rawCityRow || typeof rawCityRow !== "object") {
+        return;
+      }
+
+      const cityRow = rawCityRow as Partial<CityRow>;
+      entries.push({
+        country,
+        cityRow: {
+          city: typeof cityRow.city === "string" ? cityRow.city : "",
+          scenics: Array.isArray(cityRow.scenics)
+            ? cityRow.scenics.filter((item): item is string => typeof item === "string")
+            : [],
+          scenicDraft: typeof cityRow.scenicDraft === "string" ? cityRow.scenicDraft : ""
+        }
+      });
+    });
+  });
+
+  return buildCountryRows(entries);
+}
+
+function normalizeDaysFromStorage(value: unknown) {
+  if (!Array.isArray(value) || !value.length) {
+    return [emptyDay()];
+  }
+
+  return value.map(rawDay => {
+    if (!rawDay || typeof rawDay !== "object") {
+      return emptyDay();
+    }
+
+    const day = rawDay as Partial<DayItem>;
+
+    return {
+      date: typeof day.date === "string" ? day.date : "",
+      countryRows: normalizeCountryRowsFromStorage(day.countryRows),
+      transports: Array.isArray(day.transports)
+        ? day.transports.filter((item): item is string => typeof item === "string")
+        : [],
+      hotelName: typeof day.hotelName === "string" ? day.hotelName : "",
+      hotelAddress: typeof day.hotelAddress === "string" ? day.hotelAddress : "",
+      hotelContact: typeof day.hotelContact === "string" ? day.hotelContact : "",
+      flightNo: typeof day.flightNo === "string" ? day.flightNo : "",
+      departureAirport: typeof day.departureAirport === "string" ? day.departureAirport : "",
+      arrivalAirport: typeof day.arrivalAirport === "string" ? day.arrivalAirport : ""
+    };
+  });
+}
+
+function normalizeItineraryDocument(value: unknown): ItineraryDocument | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const document = value as Partial<ItineraryDocument>;
+  if (document.locale !== "zh" && document.locale !== "en") {
+    return null;
+  }
+
+  if (
+    typeof document.title !== "string"
+    || typeof document.fileName !== "string"
+    || !Array.isArray(document.headerFields)
+    || !Array.isArray(document.columns)
+    || !Array.isArray(document.rows)
+  ) {
+    return null;
+  }
+
+  return {
+    locale: document.locale,
+    title: document.title,
+    fileName: document.fileName,
+    headerFields: document.headerFields.filter((field): field is { label: string; value: string } => (
+      !!field
+      && typeof field === "object"
+      && typeof field.label === "string"
+      && typeof field.value === "string"
+    )),
+    columns: document.columns.filter((column): column is { key: keyof ItineraryDocumentRow; label: string } => (
+      !!column
+      && typeof column === "object"
+      && typeof column.label === "string"
+      && [
+        "day",
+        "date",
+        "city",
+        "attractions",
+        "accommodation",
+        "transportation"
+      ].includes(String(column.key))
+    )),
+    rows: document.rows.filter((row): row is ItineraryDocumentRow => (
+      !!row
+      && typeof row === "object"
+      && typeof row.day === "string"
+      && typeof row.date === "string"
+      && typeof row.city === "string"
+      && typeof row.attractions === "string"
+      && typeof row.accommodation === "string"
+      && typeof row.transportation === "string"
+    ))
+  };
+}
+
+function parseDraftFromStorage(rawDraft: string): VisaAssistantDraft | null {
+  try {
+    const parsed = JSON.parse(rawDraft) as Partial<VisaAssistantDraft>;
+    const province = typeof parsed.province === "string" && cnGeo[parsed.province]
+      ? parsed.province
+      : defaultProvince;
+    const city = typeof parsed.city === "string" && !!cnGeo[province]?.[parsed.city]
+      ? parsed.city
+      : getFirstCityForProvince(province);
+
+    return {
+      version: 1,
+      tab: parsed.tab === "itinerary" || parsed.tab === "letter" || parsed.tab === "checklist"
+        ? parsed.tab
+        : "itinerary",
+      tripStartDate: typeof parsed.tripStartDate === "string" ? parsed.tripStartDate : "",
+      tripEndDate: typeof parsed.tripEndDate === "string" ? parsed.tripEndDate : "",
+      applicantName: typeof parsed.applicantName === "string" ? parsed.applicantName : "",
+      passportNo: typeof parsed.passportNo === "string" ? parsed.passportNo : "",
+      province,
+      city,
+      days: normalizeDaysFromStorage(parsed.days),
+      zhItinerary: typeof parsed.zhItinerary === "string" ? parsed.zhItinerary : "",
+      enItinerary: typeof parsed.enItinerary === "string" ? parsed.enItinerary : "",
+      zhItineraryDocument: normalizeItineraryDocument(parsed.zhItineraryDocument),
+      enItineraryDocument: normalizeItineraryDocument(parsed.enItineraryDocument),
+      letterName: typeof parsed.letterName === "string" ? parsed.letterName : "",
+      travelPurpose: typeof parsed.travelPurpose === "string" ? parsed.travelPurpose : "旅游",
+      guarantees: Array.isArray(parsed.guarantees)
+        ? parsed.guarantees.filter((item): item is string => typeof item === "string")
+        : [],
+      otherExplain: typeof parsed.otherExplain === "string" ? parsed.otherExplain : "",
+      zhLetter: typeof parsed.zhLetter === "string" ? parsed.zhLetter : "",
+      enLetter: typeof parsed.enLetter === "string" ? parsed.enLetter : "",
+      checkMap: normalizeCheckMap(parsed.checkMap)
+    };
+  } catch {
+    return null;
+  }
 }
 
 function cityToEn(name: string) {
@@ -307,13 +548,14 @@ function getTravelTimeHint(from: string, to: string) {
 }
 
 export function VisaAssistant() {
+  const initialDraft = buildInitialDraft();
   const [tab, setTab] = useState<TabKey>("itinerary");
   const [tripStartDate, setTripStartDate] = useState("");
   const [tripEndDate, setTripEndDate] = useState("");
   const [applicantName, setApplicantName] = useState("");
   const [passportNo, setPassportNo] = useState("");
-  const [province, setProvince] = useState(Object.keys(cnGeo)[0]);
-  const [city, setCity] = useState(Object.keys(cnGeo[Object.keys(cnGeo)[0]])[0]);
+  const [province, setProvince] = useState(defaultProvince);
+  const [city, setCity] = useState(defaultCity);
   const [days, setDays] = useState<DayItem[]>([emptyDay()]);
   const [zhItinerary, setZhItinerary] = useState("");
   const [enItinerary, setEnItinerary] = useState("");
@@ -326,11 +568,8 @@ export function VisaAssistant() {
   const [zhLetter, setZhLetter] = useState("");
   const [enLetter, setEnLetter] = useState("");
   const [checkMap, setCheckMap] = useState<Record<number, boolean>>({});
-  const [pdfStatus, setPdfStatus] = useState<PdfStatusViewState>({
-    visible: false,
-    targetLabel: "",
-    ...idlePdfExportStatus
-  });
+  const [pdfStatus, setPdfStatus] = useState<PdfStatusViewState>(emptyPdfStatusViewState());
+  const [isStorageReady, setIsStorageReady] = useState(false);
 
   const provinces = Object.keys(cnGeo);
   const cities = useMemo(() => Object.keys(cnGeo[province] || {}), [province]);
@@ -498,6 +737,93 @@ export function VisaAssistant() {
     return intraDayTip ? `${previewFrom} → ${previewTo}，${intraDayTip}` : "";
   };
 
+  useEffect(() => {
+    const rawDraft = window.localStorage.getItem(visaAssistantDraftStorageKey);
+    if (!rawDraft) {
+      setIsStorageReady(true);
+      return;
+    }
+
+    const draft = parseDraftFromStorage(rawDraft);
+    if (draft) {
+      setTab(draft.tab);
+      setTripStartDate(draft.tripStartDate);
+      setTripEndDate(draft.tripEndDate);
+      setApplicantName(draft.applicantName);
+      setPassportNo(draft.passportNo);
+      setProvince(draft.province);
+      setCity(draft.city);
+      setDays(draft.days);
+      setZhItinerary(draft.zhItinerary);
+      setEnItinerary(draft.enItinerary);
+      setZhItineraryDocument(draft.zhItineraryDocument);
+      setEnItineraryDocument(draft.enItineraryDocument);
+      setLetterName(draft.letterName);
+      setTravelPurpose(draft.travelPurpose);
+      setGuarantees(draft.guarantees);
+      setOtherExplain(draft.otherExplain);
+      setZhLetter(draft.zhLetter);
+      setEnLetter(draft.enLetter);
+      setCheckMap(draft.checkMap);
+    } else {
+      window.localStorage.removeItem(visaAssistantDraftStorageKey);
+    }
+
+    setIsStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isStorageReady) {
+      return;
+    }
+
+    const draft: VisaAssistantDraft = {
+      version: 1,
+      tab,
+      tripStartDate,
+      tripEndDate,
+      applicantName,
+      passportNo,
+      province,
+      city,
+      days,
+      zhItinerary,
+      enItinerary,
+      zhItineraryDocument,
+      enItineraryDocument,
+      letterName,
+      travelPurpose,
+      guarantees,
+      otherExplain,
+      zhLetter,
+      enLetter,
+      checkMap
+    };
+
+    window.localStorage.setItem(visaAssistantDraftStorageKey, JSON.stringify(draft));
+  }, [
+    applicantName,
+    checkMap,
+    city,
+    days,
+    enItinerary,
+    enItineraryDocument,
+    enLetter,
+    guarantees,
+    isStorageReady,
+    letterName,
+    otherExplain,
+    passportNo,
+    province,
+    tab,
+    travelPurpose,
+    tripEndDate,
+    tripStartDate,
+    zhItinerary,
+    zhItineraryDocument,
+    zhLetter
+  ]);
+
   const resetPdfStatusLater = () => {
     window.setTimeout(() => {
       setPdfStatus({
@@ -506,6 +832,30 @@ export function VisaAssistant() {
         ...idlePdfExportStatus
       });
     }, pdfStatusResetDelayMs);
+  };
+
+  const resetDraft = () => {
+    window.localStorage.removeItem(visaAssistantDraftStorageKey);
+    setTab(initialDraft.tab);
+    setTripStartDate(initialDraft.tripStartDate);
+    setTripEndDate(initialDraft.tripEndDate);
+    setApplicantName(initialDraft.applicantName);
+    setPassportNo(initialDraft.passportNo);
+    setProvince(initialDraft.province);
+    setCity(initialDraft.city);
+    setDays(initialDraft.days);
+    setZhItinerary(initialDraft.zhItinerary);
+    setEnItinerary(initialDraft.enItinerary);
+    setZhItineraryDocument(initialDraft.zhItineraryDocument);
+    setEnItineraryDocument(initialDraft.enItineraryDocument);
+    setLetterName(initialDraft.letterName);
+    setTravelPurpose(initialDraft.travelPurpose);
+    setGuarantees(initialDraft.guarantees);
+    setOtherExplain(initialDraft.otherExplain);
+    setZhLetter(initialDraft.zhLetter);
+    setEnLetter(initialDraft.enLetter);
+    setCheckMap(initialDraft.checkMap);
+    setPdfStatus(emptyPdfStatusViewState());
   };
 
   const buildPdfStatus = (
@@ -673,24 +1023,42 @@ export function VisaAssistant() {
     setEnLetter(en);
   };
 
+  const handleZhItineraryEdit = (html: string) => {
+    setZhItinerary(html);
+    setZhItineraryDocument(null);
+  };
+
+  const handleEnItineraryEdit = (html: string) => {
+    setEnItinerary(html);
+    setEnItineraryDocument(null);
+  };
+
   return (
-    <main className="mx-auto w-[min(1260px,94vw)] py-8">
+    <main className="mx-auto w-[min(1260px,96vw)] px-1 py-4 sm:px-0 sm:py-6 lg:w-[min(1260px,94vw)] lg:py-8">
       <BlurFade>
-        <MagicCard className={cn(panelShellClassName, "p-6")}>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
+        <MagicCard className={cn(panelShellClassName, "p-4 sm:p-5 lg:p-6")}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2 sm:space-y-3">
               <div className="space-y-1">
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">意大利申根签证材料助手</h1>
-                <p className="max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-                  用于整理行程单、解释信与材料清单草稿，生成前请按实际预订单与个人材料逐项核对。
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl md:text-4xl">申根签材料智能助理</h1>
+                <p className="max-w-3xl text-sm leading-5 text-muted-foreground sm:leading-6 md:text-base">
+                  用于智能生成行程单、解释信与材料清单，生成前请按实际预订单与个人材料逐项核对。
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 lg:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 rounded-full px-3 text-xs sm:px-4 sm:text-sm"
+                onClick={resetDraft}
+              >
+                重置
+              </Button>
               {[
                 ["itinerary", "行程单生成"],
-                ["letter", "解释信生成"],
-                ["checklist", "材料清单"]
+                ["letter", "解释信生成（开发中）"],
+                ["checklist", "材料清单（开发中）"]
               ].map(([k, label]) => (
                 <Button
                   key={k}
@@ -698,7 +1066,7 @@ export function VisaAssistant() {
                   onClick={() => setTab(k as TabKey)}
                   variant={tab === k ? "default" : "outline"}
                   className={cn(
-                    "rounded-full px-4 text-sm",
+                    "h-9 rounded-full px-3 text-xs sm:px-4 sm:text-sm",
                     tab !== k && "bg-card"
                   )}
                 >
@@ -711,7 +1079,7 @@ export function VisaAssistant() {
       </BlurFade>
 
       <BlurFade delayMs={80}>
-        <div className="mb-6 rounded-2xl border border-border bg-muted/70 px-4 py-3 text-sm font-semibold text-muted-foreground">
+        <div className="mb-4 rounded-xl border border-border bg-muted/70 px-3 py-2 text-xs font-semibold leading-5 text-muted-foreground sm:mb-6 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">
           免责声明：本工具仅作为签证申请材料辅助生成工具，不具备保证签证通过的效力，最终签证审核结果以领馆官方判定为准。
         </div>
       </BlurFade>
@@ -719,15 +1087,14 @@ export function VisaAssistant() {
       {tab === "itinerary" && (
         <BlurFade delayMs={120}>
           <MagicCard className={cn(panelShellClassName, "p-0")}>
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-4 sm:gap-4 sm:px-5 sm:py-5 lg:px-6">
               <div className="space-y-1">
-              
-                <h2 className="text-2xl font-semibold text-foreground">签证行程单生成</h2>
-                <p className="text-sm text-muted-foreground">按天维护路线、住宿与交通信息，并在右侧生成中英文预览。</p>
+                <h2 className="text-xl font-semibold text-foreground sm:text-2xl">签证行程单生成</h2>
+                <p className="text-sm text-muted-foreground">按天维护路线、住宿与交通信息，下方可生成中英文效果预览。</p>
               </div>
               <ItineraryToolbar />
             </div>
-            <div className="space-y-5 px-6 py-6">
+            <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
               <TripBasicsSection
                 applicantName={applicantName}
                 onApplicantNameChange={setApplicantName}
@@ -745,7 +1112,7 @@ export function VisaAssistant() {
                 onAutoBuildDays={autoBuildDays}
               />
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
               {days.map((d, i) => {
                 return (
                   <div key={i}>
@@ -771,21 +1138,23 @@ export function VisaAssistant() {
               </div>
 
               <div className="flex justify-start">
-                <Button type="button" className="px-5" onClick={generateItinerary}>
+                <Button type="button" className="h-9 px-4 text-sm sm:px-5" onClick={generateItinerary}>
                   生成中英文行程单
                 </Button>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                 <GeneratedPreview
                   title="中文版（可编辑）"
                   html={zhItinerary}
+                  onHtmlChange={handleZhItineraryEdit}
                   footer={(
                     <div className="space-y-3">
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2 sm:gap-3">
                         <Button
                           type="button"
                           variant="outline"
+                          className="h-9 px-3 text-sm"
                           disabled={!zhItineraryDocument || isPdfExportBusy}
                           onClick={() => handleExportDocx("zh")}
                         >
@@ -794,6 +1163,7 @@ export function VisaAssistant() {
                         <Button
                           type="button"
                           variant="outline"
+                          className="h-9 px-3 text-sm"
                           disabled={!zhItineraryDocument || isPdfExportBusy}
                           onClick={() => handleExportPdf("zh")}
                         >
@@ -801,8 +1171,8 @@ export function VisaAssistant() {
                         </Button>
                       </div>
                       {showZhPdfStatus ? (
-                        <div className="rounded-xl border border-border bg-muted/40 p-3">
-                          <div className="mb-2 flex items-center justify-between text-sm font-medium text-foreground">
+                        <div className="rounded-xl border border-border bg-muted/40 p-2.5 sm:p-3">
+                          <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-foreground sm:mb-2 sm:text-sm">
                             <span>{pdfStatus.targetLabel}</span>
                             <span>{pdfStatus.progress}%</span>
                           </div>
@@ -815,7 +1185,7 @@ export function VisaAssistant() {
                               style={{ width: `${pdfStatus.progress}%` }}
                             />
                           </div>
-                          <p className="mt-2 text-sm text-muted-foreground">{pdfStatus.message}</p>
+                          <p className="mt-1.5 text-xs text-muted-foreground sm:mt-2 sm:text-sm">{pdfStatus.message}</p>
                         </div>
                       ) : null}
                     </div>
@@ -824,12 +1194,14 @@ export function VisaAssistant() {
                 <GeneratedPreview
                   title="英文版（可编辑）"
                   html={enItinerary}
+                  onHtmlChange={handleEnItineraryEdit}
                   footer={(
                     <div className="space-y-3">
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2 sm:gap-3">
                         <Button
                           type="button"
                           variant="outline"
+                          className="h-9 px-3 text-sm"
                           disabled={!enItineraryDocument || isPdfExportBusy}
                           onClick={() => handleExportDocx("en")}
                         >
@@ -838,6 +1210,7 @@ export function VisaAssistant() {
                         <Button
                           type="button"
                           variant="outline"
+                          className="h-9 px-3 text-sm"
                           disabled={!enItineraryDocument || isPdfExportBusy}
                           onClick={() => handleExportPdf("en")}
                         >
@@ -845,8 +1218,8 @@ export function VisaAssistant() {
                         </Button>
                       </div>
                       {showEnPdfStatus ? (
-                        <div className="rounded-xl border border-border bg-muted/40 p-3">
-                          <div className="mb-2 flex items-center justify-between text-sm font-medium text-foreground">
+                        <div className="rounded-xl border border-border bg-muted/40 p-2.5 sm:p-3">
+                          <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-foreground sm:mb-2 sm:text-sm">
                             <span>{pdfStatus.targetLabel}</span>
                             <span>{pdfStatus.progress}%</span>
                           </div>
@@ -859,7 +1232,7 @@ export function VisaAssistant() {
                               style={{ width: `${pdfStatus.progress}%` }}
                             />
                           </div>
-                          <p className="mt-2 text-sm text-muted-foreground">{pdfStatus.message}</p>
+                          <p className="mt-1.5 text-xs text-muted-foreground sm:mt-2 sm:text-sm">{pdfStatus.message}</p>
                         </div>
                       ) : null}
                     </div>
@@ -873,9 +1246,9 @@ export function VisaAssistant() {
 
       {tab === "letter" && (
         <BlurFade delayMs={120}>
-          <MagicCard className={cn(panelShellClassName, "p-6")}>
-            <div className="mb-4 space-y-1">
-              <h2 className="text-xl font-semibold text-foreground">签证解释信生成</h2>
+          <MagicCard className={cn(panelShellClassName, "p-4 sm:p-5 lg:p-6")}>
+            <div className="mb-3 space-y-1 sm:mb-4">
+              <h2 className="text-lg font-semibold text-foreground sm:text-xl">签证解释信生成</h2>
               <p className="text-sm text-muted-foreground">补充个人情况与回国约束信息，生成后请按实际材料再次校对。</p>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
@@ -890,13 +1263,25 @@ export function VisaAssistant() {
               </label>
             ))}</div>
             <Textarea className="mt-3" placeholder="其他需解释内容" value={otherExplain} onChange={e => setOtherExplain(e.target.value)} />
-            <div className="mt-4">
+            <div className="mt-3">
               <Button type="button" onClick={generateLetter}>生成中英文解释信</Button>
             </div>
             <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm font-medium text-destructive">解释信结尾需手写签名，请打印后务必手写签名再提交至领馆。</div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="min-h-40 rounded-xl border border-border bg-background p-3" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: zhLetter }} />
-              <div className="min-h-40 rounded-xl border border-border bg-background p-3" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: enLetter }} />
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div
+                className="min-h-40 rounded-xl border border-border bg-background p-3"
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: zhLetter }}
+                onInput={event => setZhLetter(event.currentTarget.innerHTML)}
+              />
+              <div
+                className="min-h-40 rounded-xl border border-border bg-background p-3"
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: enLetter }}
+                onInput={event => setEnLetter(event.currentTarget.innerHTML)}
+              />
             </div>
           </MagicCard>
         </BlurFade>
@@ -904,14 +1289,14 @@ export function VisaAssistant() {
 
       {tab === "checklist" && (
         <BlurFade delayMs={120}>
-          <MagicCard className={cn(panelShellClassName, "p-6")}>
-            <div className="mb-4 space-y-1">
-              <h2 className="text-xl font-semibold text-foreground">签证申请材料准备清单</h2>
+          <MagicCard className={cn(panelShellClassName, "p-4 sm:p-5 lg:p-6")}>
+            <div className="mb-3 space-y-1 sm:mb-4">
+              <h2 className="text-lg font-semibold text-foreground sm:text-xl">签证申请材料准备清单</h2>
               <p className="text-sm text-muted-foreground">按清单核对基础材料，勾选状态仅用于当前页面辅助记录。</p>
             </div>
             <div className="space-y-2">
               {materialList.map((m, i) => (
-                <label key={m[0]} className="flex items-start gap-2 rounded-xl border border-border bg-background p-3">
+                <label key={m[0]} className="flex items-start gap-2 rounded-xl border border-border bg-background p-2.5 sm:p-3">
                   <input type="checkbox" checked={!!checkMap[i]} onChange={e => setCheckMap(prev => ({ ...prev, [i]: e.target.checked }))} />
                   <span>
                     <strong className="text-foreground">{m[0]}</strong>{" "}

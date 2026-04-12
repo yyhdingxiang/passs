@@ -128,21 +128,21 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
 
   return (
     <Card className="border-border bg-card shadow-none">
-      <CardHeader className="border-b border-border pb-4">
-        <CardTitle className="text-lg font-semibold text-foreground">基础信息</CardTitle>
+      <CardHeader className="border-b border-border px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
+        <CardTitle className="text-base font-semibold text-foreground sm:text-lg">基础信息</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-5 pt-5 md:grid-cols-2 xl:grid-cols-4">
-        <div className="space-y-1.5">
+      <CardContent className="grid gap-4 px-4 pb-4 pt-4 sm:gap-5 sm:px-6 sm:pb-6 sm:pt-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-1">
           <Label htmlFor="applicantName">申请人姓名</Label>
           <Input id="applicantName" placeholder="申请人姓名" value={applicantName} onChange={e => onApplicantNameChange(e.target.value)} />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label htmlFor="passportNo">护照号</Label>
           <Input id="passportNo" placeholder="护照号" value={passportNo} onChange={e => onPassportNoChange(e.target.value)} />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label>出发省份</Label>
           <Select value={province} onValueChange={onProvinceChange}>
             <SelectTrigger className="bg-card">
@@ -154,7 +154,7 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
           </Select>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label>出发城市</Label>
           <Select value={city} onValueChange={onCityChange}>
             <SelectTrigger className="bg-card">
@@ -166,7 +166,7 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
           </Select>
         </div>
 
-        <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
+        <div className="space-y-1 md:col-span-2 xl:col-span-2">
           <Label>出行日期</Label>
           <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
             <PopoverTrigger asChild>
@@ -174,7 +174,7 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
                 type="button"
                 variant="outline"
                 className={cn(
-                  "w-full justify-between bg-card px-3 text-left text-sm font-normal shadow-xs",
+                  "h-10 w-full justify-between bg-card px-3 text-left text-sm font-normal shadow-xs",
                   !selectedRange && "text-muted-foreground"
                 )}
               >
@@ -199,14 +199,14 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
           </Popover>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2">
-          <div className="space-y-1.5">
+        <div className="grid gap-2 sm:grid-cols-2 xl:col-span-2">
+          <div className="space-y-1">
             <Label>出发日期</Label>
             <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
               {formatFieldDate(tripStartDate)}
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label>返回日期</Label>
             <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
               {formatFieldDate(tripEndDate)}
@@ -215,7 +215,7 @@ export function TripBasicsSection(props: TripBasicsSectionProps) {
         </div>
 
         <div className="xl:col-span-4">
-          <Button type="button" variant="outline" className="bg-card" onClick={onAutoBuildDays}>
+          <Button type="button" className="h-9 px-3 text-sm" onClick={onAutoBuildDays}>
             生成行程安排表
           </Button>
         </div>
