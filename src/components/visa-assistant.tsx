@@ -25,10 +25,11 @@ import { ItineraryToolbar } from "@/components/visa-form/itinerary-toolbar";
 import { TripBasicsSection } from "@/components/visa-form/trip-basics-section";
 import {
   crossCityTime,
+  getEnglishAirportName,
+  getEnglishCityName,
   getCityAirports,
   scenicMap,
-  schengenCountries,
-  zhEnCity
+  schengenCountries
 } from "@/data/schengen-data";
 
 type TabKey = "itinerary" | "letter" | "checklist";
@@ -127,6 +128,7 @@ const panelShellClassName = "mb-6 border border-border bg-card/95 shadow-sm";
 const nativeFieldClassName = "h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 const pdfStatusResetDelayMs = 2500;
 const visaAssistantDraftStorageKey = "visa-assistant-draft-v1";
+const rewardQrStorageKey = "visa-assistant-reward-qr-v1";
 const cnGeo: Record<string, Record<string, string[]>> = {
   北京市: {
     北京市: ["东城区", "西城区", "朝阳区", "海淀区", "丰台区", "通州区"]
@@ -798,7 +800,7 @@ function parseDraftFromStorage(rawDraft: string): VisaAssistantDraft | null {
 }
 
 function cityToEn(name: string) {
-  return zhEnCity[name] || name;
+  return getEnglishCityName(name);
 }
 
 function scenicToEn(name: string) {
@@ -958,6 +960,9 @@ export function VisaAssistant() {
   const [zhLetter, setZhLetter] = useState("");
   const [enLetter, setEnLetter] = useState("");
   const [checkMap, setCheckMap] = useState<Record<number, boolean>>({});
+  const [showRewardQr, setShowRewardQr] = useState(false);
+  const [rewardQrSrc, setRewardQrSrc] = useState("/reward-author-qr.png");
+  const [rewardQrLoadError, setRewardQrLoadError] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<PdfStatusViewState>(emptyPdfStatusViewState());
   const [isStorageReady, setIsStorageReady] = useState(false);
 
@@ -1128,6 +1133,17 @@ export function VisaAssistant() {
   };
 
   useEffect(() => {
+    try {
+      const savedRewardQr = window.localStorage.getItem(rewardQrStorageKey);
+      if (savedRewardQr) {
+        setRewardQrSrc(savedRewardQr);
+      }
+    } catch {
+      // Ignore storage failures and keep fallback path.
+    }
+  }, []);
+
+  useEffect(() => {
     const rawDraft = window.localStorage.getItem(visaAssistantDraftStorageKey);
     if (!rawDraft) {
       setIsStorageReady(true);
@@ -1214,6 +1230,26 @@ export function VisaAssistant() {
     zhLetter
   ]);
 
+  const handleRewardQrFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result) return;
+      setRewardQrSrc(result);
+      setRewardQrLoadError(false);
+      try {
+        window.localStorage.setItem(rewardQrStorageKey, result);
+      } catch {
+        // Ignore storage quota errors; still display for current session.
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
   const resetPdfStatusLater = () => {
     window.setTimeout(() => {
       setPdfStatus({
@@ -1291,7 +1327,7 @@ export function VisaAssistant() {
         ? `（起飞：${d.departureAirport || "-"}；落地：${d.arrivalAirport || "-"}；航班号：${d.flightNo || "-"}）`
         : "";
       const flightEN = d.transports.includes("飞机")
-        ? ` (Dep: ${d.departureAirport || "-"}; Arr: ${d.arrivalAirport || "-"}; Flight No.: ${d.flightNo || "-"})`
+        ? ` (Dep: ${d.departureAirport ? getEnglishAirportName(d.departureAirport) : "-"}; Arr: ${d.arrivalAirport ? getEnglishAirportName(d.arrivalAirport) : "-"}; Flight No.: ${d.flightNo || "-"})`
         : "";
       const intraDayTip = getTravelTimeHint(depart, arrive);
       const intraDayTipEn = translateTimeHintToEn(intraDayTip);
@@ -1342,7 +1378,7 @@ export function VisaAssistant() {
     const enDocument = buildItineraryDocument({
       applicantName,
       passportNo,
-      departure: `${cityToEn(city)}, China`,
+      departure: `${getEnglishCityName(city)}, China`,
       locale: "en",
       rows: enRows
     });
@@ -1716,7 +1752,48 @@ export function VisaAssistant() {
           </MagicCard>
         </BlurFade>
       )}
-      <div className="pb-4 pt-2 text-center text-xs text-muted-foreground sm:pb-6">
+      <div className="pt-2 text-center">
+        <Button
+          type="button"
+          variant="default"
+          size="sm"
+          className={cn(
+            "border-0 text-white shadow-md transition-all hover:scale-[1.02] hover:shadow-lg",
+            showRewardQr
+              ? "bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700"
+              : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
+          )}
+          onClick={() => setShowRewardQr(prev => !prev)}
+        >
+          {showRewardQr ? "收起打赏二维码" : "打赏作者"}
+        </Button>
+        {showRewardQr && (
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <img
+              src={rewardQrSrc}
+              alt="作者收款二维码"
+              className="w-full max-w-[280px] rounded-lg border border-border bg-background p-1"
+              onLoad={() => setRewardQrLoadError(false)}
+              onError={() => setRewardQrLoadError(true)}
+            />
+            {rewardQrLoadError && (
+              <div className="space-y-2 text-center">
+                <p className="text-xs text-muted-foreground">
+                  未检测到二维码图片，请上传你的收款二维码（支持 png/jpg/webp）。
+                </p>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleRewardQrFileChange}
+                  className="text-xs text-muted-foreground file:mr-2 file:rounded-md file:border file:border-border file:bg-card file:px-2 file:py-1 file:text-foreground"
+                />
+              </div>
+            )}
+            
+          </div>
+        )}
+      </div>
+      <div className="pb-4 pt-3 text-center text-xs text-muted-foreground sm:pb-6">
         该版本更新于：2026-04-13 01:02:00
       </div>
     </main>

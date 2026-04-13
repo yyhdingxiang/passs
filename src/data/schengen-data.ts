@@ -484,6 +484,167 @@ export const zhEnCity: Record<string, string> = {
   苏黎世: "Zurich", 日内瓦: "Geneva", 卢塞恩: "Lucerne", 因特拉肯: "Interlaken", 伯尔尼: "Bern"
 };
 
+function normalizeCityName(cityName: string) {
+  return cityName.trim().replace(/市$/, "");
+}
+
+const airportOwningCityMap: Record<string, string> = Object.fromEntries(
+  cityAirportRegistry.flatMap(item => item.airports.map(airport => [airport, item.key]))
+);
+
+const zhEnAirportOfficialMap: Record<string, string> = {
+  "阿克苏红旗坡机场（AKU）": "Aksu Hongqipo Airport (AKU)",
+  "阿姆斯特丹史基浦机场（AMS）": "Amsterdam Airport Schiphol (AMS)",
+  "安庆天柱山机场（AQG）": "Anqing Tianzhushan Airport (AQG)",
+  "巴黎奥利机场（ORY）": "Paris Orly Airport (ORY)",
+  "巴黎戴高乐机场（CDG）": "Charles de Gaulle Airport (CDG)",
+  "巴里机场（BRI）": "Bari Karol Wojtyla Airport (BRI)",
+  "巴塞罗那机场（BCN）": "Josep Tarradellas Barcelona-El Prat Airport (BCN)",
+  "柏林勃兰登堡机场（BER）": "Berlin Brandenburg Airport (BER)",
+  "保山云瑞机场（BSD）": "Baoshan Yunrui Airport (BSD)",
+  "北海福成机场（BHY）": "Beihai Fucheng Airport (BHY)",
+  "北京大兴国际机场（PKX）": "Beijing Daxing International Airport (PKX)",
+  "北京首都国际机场（PEK）": "Beijing Capital International Airport (PEK)",
+  "比萨国际机场（PSA）": "Pisa International Airport (PSA)",
+  "博尔扎诺机场（BZO）": "Bolzano Airport (BZO)",
+  "博洛尼亚机场（BLQ）": "Bologna Guglielmo Marconi Airport (BLQ)",
+  "布达佩斯李斯特·费伦茨机场（BUD）": "Budapest Ferenc Liszt International Airport (BUD)",
+  "布拉格机场（PRG）": "Václav Havel Airport Prague (PRG)",
+  "布鲁塞尔机场（BRU）": "Brussels Airport (BRU)",
+  "常德桃花源机场（CGD）": "Changde Taohuayuan Airport (CGD)",
+  "常州奔牛国际机场（CZX）": "Changzhou Benniu International Airport (CZX)",
+  "成都双流国际机场（CTU）": "Chengdu Shuangliu International Airport (CTU)",
+  "成都天府国际机场（TFU）": "Chengdu Tianfu International Airport (TFU)",
+  "重庆江北国际机场（CKG）": "Chongqing Jiangbei International Airport (CKG)",
+  "大理凤仪机场（DLU）": "Dali Fengyi Airport (DLU)",
+  "大连周水子国际机场（DLC）": "Dalian Zhoushuizi International Airport (DLC)",
+  "都灵机场（TRN）": "Turin Airport (TRN)",
+  "敦煌莫高国际机场（DNH）": "Dunhuang Mogao International Airport (DNH)",
+  "佛罗伦萨机场（FLR）": "Florence Airport (FLR)",
+  "福州长乐国际机场（FOC）": "Fuzhou Changle International Airport (FOC)",
+  "阜阳西关机场（FUG）": "Fuyang Xiguan Airport (FUG)",
+  "赣州黄金机场（KOW）": "Ganzhou Huangjin Airport (KOW)",
+  "广州白云国际机场（CAN）": "Guangzhou Baiyun International Airport (CAN)",
+  "贵阳龙洞堡国际机场（KWE）": "Guiyang Longdongbao International Airport (KWE)",
+  "桂林两江国际机场（KWL）": "Guilin Liangjiang International Airport (KWL)",
+  "哈尔滨太平国际机场（HRB）": "Harbin Taiping International Airport (HRB)",
+  "海口美兰国际机场（HAK）": "Haikou Meilan International Airport (HAK)",
+  "杭州萧山国际机场（HGH）": "Hangzhou Xiaoshan International Airport (HGH)",
+  "合肥新桥国际机场（HFE）": "Hefei Xinqiao International Airport (HFE)",
+  "呼和浩特白塔国际机场（HET）": "Hohhot Baita International Airport (HET)",
+  "华沙肖邦机场（WAW）": "Warsaw Chopin Airport (WAW)",
+  "黄山屯溪国际机场（TXN）": "Huangshan Tunxi International Airport (TXN)",
+  "惠州平潭机场（HUZ）": "Huizhou Pingtan Airport (HUZ)",
+  "济南遥墙国际机场（TNA）": "Jinan Yaoqiang International Airport (TNA)",
+  "嘉峪关机场（JHG）": "Jiayuguan Airport (JHG)",
+  "揭阳潮汕国际机场（SWA）": "Jieyang Chaoshan International Airport (SWA)",
+  "金昌金川机场（JIC）": "Jinchang Jinchuan Airport (JIC)",
+  "景德镇罗家机场（JDZ）": "Jingdezhen Luojia Airport (JDZ)",
+  "九江庐山机场（JIU）": "Jiujiang Lushan Airport (JIU)",
+  "喀什徕宁国际机场（KHG）": "Kashgar Laining International Airport (KHG)",
+  "凯里黄平机场（KJH）": "Kaili Huangping Airport (KJH)",
+  "库尔勒梨城机场（KRL）": "Korla Licheng Airport (KRL)",
+  "昆明长水国际机场（KMG）": "Kunming Changshui International Airport (KMG)",
+  "拉萨贡嘎国际机场（LXA）": "Lhasa Gonggar International Airport (LXA)",
+  "兰州中川国际机场（LHW）": "Lanzhou Zhongchuan International Airport (LHW)",
+  "里昂圣埃克絮佩里机场（LYS）": "Lyon-Saint Exupéry Airport (LYS)",
+  "里斯本机场（LIS）": "Lisbon Airport (LIS)",
+  "丽江三义国际机场（LJG）": "Lijiang Sanyi International Airport (LJG)",
+  "荔波机场（LLB）": "Libo Airport (LLB)",
+  "连云港花果山国际机场（LYG）": "Lianyungang Huaguoshan International Airport (LYG)",
+  "卢森堡机场（LUX）": "Luxembourg Airport (LUX)",
+  "泸州云龙机场（LZO）": "Luzhou Yunlong Airport (LZO)",
+  "鹿特丹海牙机场（RTM）": "Rotterdam The Hague Airport (RTM)",
+  "罗马菲乌米奇诺机场（FCO）": "Leonardo da Vinci International Airport (FCO)",
+  "罗马钱皮诺机场（CIA）": "Ciampino-G. B. Pastine International Airport (CIA)",
+  "洛阳北郊机场（LYA）": "Luoyang Beijiao Airport (LYA)",
+  "马德里巴拉哈斯机场（MAD）": "Adolfo Suárez Madrid-Barajas Airport (MAD)",
+  "梅州梅县机场（MXZ）": "Meizhou Meixian Airport (MXZ)",
+  "米兰利纳特机场（LIN）": "Milan Linate Airport (LIN)",
+  "米兰马尔彭萨机场（MXP）": "Milan Malpensa Airport (MXP)",
+  "绵阳南郊机场（MIG）": "Mianyang Nanjiao Airport (MIG)",
+  "慕尼黑机场（MUC）": "Munich Airport (MUC)",
+  "那不勒斯国际机场（NAP）": "Naples International Airport (NAP)",
+  "南昌昌北国际机场（KHN）": "Nanchang Changbei International Airport (KHN)",
+  "南充高坪机场（NAO）": "Nanchong Gaoping Airport (NAO)",
+  "南京禄口国际机场（NKG）": "Nanjing Lukou International Airport (NKG)",
+  "南宁吴圩国际机场（NNG）": "Nanning Wuxu International Airport (NNG)",
+  "南通兴东国际机场（NTG）": "Nantong Xingdong International Airport (NTG)",
+  "南阳姜营机场（NNY）": "Nanyang Jiangying Airport (NNY)",
+  "宁波栎社国际机场（NGB）": "Ningbo Lishe International Airport (NGB)",
+  "普洱思茅机场（SYM）": "Pu'er Simao Airport (SYM)",
+  "青岛胶东国际机场（TAO）": "Qingdao Jiaodong International Airport (TAO)",
+  "热那亚机场（GOA）": "Genoa Cristoforo Colombo Airport (GOA)",
+  "日喀则和平机场（RKZ）": "Shigatse Peace Airport (RKZ)",
+  "萨尔茨堡机场（SZG）": "Salzburg Airport (SZG)",
+  "塞维利亚机场（SVQ）": "Seville Airport (SVQ)",
+  "三亚凤凰国际机场（SYX）": "Sanya Phoenix International Airport (SYX)",
+  "厦门高崎国际机场（XMN）": "Xiamen Gaoqi International Airport (XMN)",
+  "上海虹桥国际机场（SHA）": "Shanghai Hongqiao International Airport (SHA)",
+  "上海浦东国际机场（PVG）": "Shanghai Pudong International Airport (PVG)",
+  "深圳宝安国际机场（SZX）": "Shenzhen Bao'an International Airport (SZX)",
+  "沈阳桃仙国际机场（SHE）": "Shenyang Taoxian International Airport (SHE)",
+  "苏南硕放国际机场（WUX）": "Sunan Shuofang International Airport (WUX)",
+  "太原武宿国际机场（TYN）": "Taiyuan Wusu International Airport (TYN)",
+  "特雷维索机场（TSF）": "Treviso Airport (TSF)",
+  "天津滨海国际机场（TSN）": "Tianjin Binhai International Airport (TSN)",
+  "威尼斯马可波罗机场（VCE）": "Venice Marco Polo Airport (VCE)",
+  "维罗纳机场（VRN）": "Verona Villafranca Airport (VRN)",
+  "维也纳国际机场（VIE）": "Vienna International Airport (VIE)",
+  "温州龙湾国际机场（WNZ）": "Wenzhou Longwan International Airport (WNZ)",
+  "乌鲁木齐地窝堡国际机场（URC）": "Urumqi Diwopu International Airport (URC)",
+  "武汉天河国际机场（WUH）": "Wuhan Tianhe International Airport (WUH)",
+  "西安咸阳国际机场（XIY）": "Xi'an Xianyang International Airport (XIY)",
+  "西昌青山机场（XIC）": "Xichang Qingshan Airport (XIC)",
+  "西宁曹家堡国际机场（XNN）": "Xining Caojiabao International Airport (XNN)",
+  "西双版纳嘎洒国际机场（JHG）": "Xishuangbanna Gasa International Airport (JHG)",
+  "襄阳刘集机场（XFN）": "Xiangyang Liuji Airport (XFN)",
+  "徐州观音国际机场（XUZ）": "Xuzhou Guanyin International Airport (XUZ)",
+  "雅典国际机场（ATH）": "Athens International Airport (ATH)",
+  "盐城南洋国际机场（YNZ）": "Yancheng Nanyang International Airport (YNZ)",
+  "扬州泰州国际机场（YTY）": "Yangzhou Taizhou International Airport (YTY)",
+  "伊宁机场（YIN）": "Yining Airport (YIN)",
+  "宜宾五粮液机场（YBP）": "Yibin Wuliangye Airport (YBP)",
+  "宜昌三峡国际机场（YIH）": "Yichang Sanxia International Airport (YIH)",
+  "银川河东国际机场（INC）": "Yinchuan Hedong International Airport (INC)",
+  "岳阳三荷机场（YYA）": "Yueyang Sanhe Airport (YYA)",
+  "湛江吴川机场（ZHA）": "Zhanjiang Wuchuan Airport (ZHA)",
+  "张家界荷花国际机场（DYG）": "Zhangjiajie Hehua International Airport (DYG)",
+  "长春龙嘉国际机场（CGQ）": "Changchun Longjia International Airport (CGQ)",
+  "长沙黄花国际机场（CSX）": "Changsha Huanghua International Airport (CSX)",
+  "昭通花鹿坪机场（ZAT）": "Zhaotong Hualuping Airport (ZAT)",
+  "郑州新郑国际机场（CGO）": "Zhengzhou Xinzheng International Airport (CGO)",
+  "珠海金湾机场（ZUH）": "Zhuhai Jinwan Airport (ZUH)"
+};
+
+export function getEnglishCityName(cityName: string) {
+  const normalized = cityName.trim();
+  if (!normalized) return "";
+  return zhEnCity[normalized] || zhEnCity[normalizeCityName(normalized)] || normalized;
+}
+
+export function getEnglishAirportName(airportName: string) {
+  const normalized = airportName.trim();
+  if (!normalized) return "";
+  if (normalized === "其他机场") return "Other Airport";
+  if (zhEnAirportOfficialMap[normalized]) return zhEnAirportOfficialMap[normalized];
+
+  const matchedCode = normalized.match(/[（(]([A-Z0-9]{3,4})[）)]/);
+  const airportCode = matchedCode?.[1] || "";
+  const owningCity = airportOwningCityMap[normalized] || "";
+  const cityEn = owningCity ? getEnglishCityName(owningCity) : "";
+
+  if (!airportCode) {
+    return cityEn ? `${cityEn} Airport` : normalized;
+  }
+
+  if (!cityEn) {
+    return `Airport (${airportCode})`;
+  }
+
+  return `${cityEn} Airport (${airportCode})`;
+}
+
 export const crossCityTime: Record<string, string> = {
   "罗马-佛罗伦萨": "火车平均约1.5小时",
   "佛罗伦萨-威尼斯": "火车平均约2.1小时",
