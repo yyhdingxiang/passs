@@ -1794,7 +1794,7 @@ export function VisaAssistant() {
         )}
       </div>
       <div className="pb-4 pt-3 text-center text-xs text-muted-foreground sm:pb-6">
-        该版本更新于：2026-04-13 01:02:00
+        该版本更新于：2026-04-13 21:12 修复了英文行程单中机场名展示错误；新增打赏作者收款码:)
       </div>
     </main>
   );
